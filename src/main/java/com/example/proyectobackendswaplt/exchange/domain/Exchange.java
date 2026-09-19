@@ -31,5 +31,6 @@ public class Exchange {
     @JoinColumn(name = "receiving_user_id")
     private User receivingUser;
 
-    private String state;
+    @Enumerated(EnumType.STRING)
+    private ExchangeStatus state;
 }
