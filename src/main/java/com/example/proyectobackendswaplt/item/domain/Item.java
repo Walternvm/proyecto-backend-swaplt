@@ -32,7 +32,7 @@ public class Item {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    private ItemStatus state;
+    private ItemState state;
 
     private String location;
 }

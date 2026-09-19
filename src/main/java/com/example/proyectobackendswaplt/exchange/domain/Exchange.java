@@ -32,5 +32,5 @@ public class Exchange {
     private User receivingUser;
 
     @Enumerated(EnumType.STRING)
-    private ExchangeStatus state;
+    private ExchangeStatus status;
 }
