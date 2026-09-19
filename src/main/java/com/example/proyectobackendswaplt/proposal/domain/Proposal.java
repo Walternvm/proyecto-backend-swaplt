@@ -32,7 +32,7 @@ public class Proposal {
     private Item requestedItem;
 
     @Enumerated(EnumType.STRING)
-    private ProposalStatus status;
+    private ProposalStatus state;
 
     private String message;
 }
