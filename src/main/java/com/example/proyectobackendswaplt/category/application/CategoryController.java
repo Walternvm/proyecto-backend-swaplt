@@ -2,6 +2,7 @@ package com.example.proyectobackendswaplt.category.application;
 
 import com.example.proyectobackendswaplt.category.domain.Category;
 import com.example.proyectobackendswaplt.category.domain.CategoryService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +17,7 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping
-    public ResponseEntity<Category> create(@RequestBody Category category) {
+    public ResponseEntity<Category> create(@Valid @RequestBody Category category) {
         Category created = categoryService.create(category);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }

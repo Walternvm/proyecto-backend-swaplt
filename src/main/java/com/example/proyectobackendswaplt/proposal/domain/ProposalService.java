@@ -85,7 +85,7 @@ public class ProposalService {
         Exchange exchange = new Exchange();
         exchange.setProposal(proposal);
         exchange.setOfferingUser(proposal.getUser());
-        exchange.setReceivingUser(offeredItem.getUser());
+        exchange.setReceivingUser(requestedItem.getUser());
         exchange.setStatus(ExchangeStatus.PENDING);
         exchange = exchangeRepository.save(exchange);
 

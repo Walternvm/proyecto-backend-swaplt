@@ -3,6 +3,7 @@ package com.example.proyectobackendswaplt.exchange.domain;
 import com.example.proyectobackendswaplt.proposal.domain.Proposal;
 import com.example.proyectobackendswaplt.user.domain.User;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,18 +20,22 @@ public class Exchange {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "proposal_id", nullable = false, unique = true)
     private Proposal proposal;
 
+    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "offering_user_id", nullable = false)
     private User offeringUser;
 
+    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "receiving_user_id", nullable = false)
     private User receivingUser;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ExchangeStatus status = ExchangeStatus.PENDING;

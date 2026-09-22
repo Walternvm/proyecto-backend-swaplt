@@ -2,6 +2,7 @@ package com.example.proyectobackendswaplt.category.domain;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,6 +22,7 @@ public class Category {
     private Long id;
 
     @NotBlank
-    @Column(nullable = false, unique = true)
+    @Size(max = 80)
+    @Column(nullable = false, unique = true, length = 80)
     private String name;
 }

@@ -5,6 +5,8 @@ import com.example.proyectobackendswaplt.user.domain.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,6 +23,7 @@ public class Review {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exchange_id", nullable = false)
     private Exchange exchange;
@@ -35,8 +38,11 @@ public class Review {
 
     @Min(1)
     @Max(5)
+    @NotNull
     @Column(nullable = false)
     private Integer rating;
 
+    @Size(max = 1000)
+    @Column(length = 1000)
     private String comment;
 }
