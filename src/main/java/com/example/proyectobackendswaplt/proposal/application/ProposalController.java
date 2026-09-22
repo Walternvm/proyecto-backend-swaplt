@@ -1,9 +1,10 @@
 package com.example.proyectobackendswaplt.proposal.application;
 
-import com.example.proyectobackendswaplt.exchange.domain.Exchange;
-import com.example.proyectobackendswaplt.proposal.domain.Proposal;
 import com.example.proyectobackendswaplt.proposal.domain.ProposalService;
-import com.example.proyectobackendswaplt.user.infrastructure.UserRepository;
+import com.example.proyectobackendswaplt.proposal.dto.ProposalRequest;
+import com.example.proyectobackendswaplt.proposal.dto.ProposalResponse;
+import com.example.proyectobackendswaplt.exchange.dto.ExchangeResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,29 +18,27 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProposalController {
     private final ProposalService proposalService;
-    private final UserRepository userRepository;
 
     @PostMapping
-    public ResponseEntity<Proposal> create(@RequestBody Proposal proposal, Authentication authentication) {
-        proposal.setUser(userRepository.findByEmail(authentication.getName()).orElseThrow());
-        Proposal created = proposalService.create(proposal);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<ProposalResponse> create(@Valid @RequestBody ProposalRequest request,
+                                                   Authentication authentication) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ProposalResponse.from(proposalService.create(request, authentication.getName())));
     }
 
     @GetMapping
-    public ResponseEntity<List<Proposal>> findAll() {
-        return ResponseEntity.ok(proposalService.findAll());
+    public ResponseEntity<List<ProposalResponse>> findAll() {
+        return ResponseEntity.ok(proposalService.findAll().stream().map(ProposalResponse::from).toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Proposal> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(proposalService.findById(id));
+    public ResponseEntity<ProposalResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(ProposalResponse.from(proposalService.findById(id)));
     }
 
     @PutMapping("/{id}/accept")
-    public ResponseEntity<Exchange> accept(@PathVariable Long id) {
-        Exchange exchange = proposalService.acceptProposal(id);
-        return ResponseEntity.ok(exchange);
+    public ResponseEntity<ExchangeResponse> accept(@PathVariable Long id) {
+        return ResponseEntity.ok(ExchangeResponse.from(proposalService.acceptProposal(id)));
     }
 
     @PutMapping("/{id}/reject")

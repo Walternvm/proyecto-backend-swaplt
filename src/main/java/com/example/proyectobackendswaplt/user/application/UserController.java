@@ -1,7 +1,7 @@
 package com.example.proyectobackendswaplt.user.application;
 
-import com.example.proyectobackendswaplt.user.domain.User;
 import com.example.proyectobackendswaplt.user.domain.UserService;
+import com.example.proyectobackendswaplt.user.dto.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,13 +16,13 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    public ResponseEntity<List<User>> findAll() {
-        return ResponseEntity.ok(userService.findAll());
+    public ResponseEntity<List<UserResponse>> findAll() {
+        return ResponseEntity.ok(userService.findAll().stream().map(UserResponse::from).toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.findById(id));
+    public ResponseEntity<UserResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(UserResponse.from(userService.findById(id)));
     }
 
     @DeleteMapping("/{id}")

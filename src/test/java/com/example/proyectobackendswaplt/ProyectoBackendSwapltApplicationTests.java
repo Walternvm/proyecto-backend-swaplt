@@ -21,6 +21,8 @@ import com.example.proyectobackendswaplt.proposal.domain.Proposal;
 import com.example.proyectobackendswaplt.proposal.infrastructure.ProposalRepository;
 import com.example.proyectobackendswaplt.proposal.domain.ProposalService;
 import com.example.proyectobackendswaplt.review.domain.Review;
+import com.example.proyectobackendswaplt.auth.JwtService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -52,6 +54,8 @@ class ProyectoBackendSwapltApplicationTests {
     private ProposalRepository proposalRepository;
     @Autowired
     private ProposalService proposalService;
+    @Autowired
+    private JwtService jwtService;
 
     @Test
     void contextLoads() {
@@ -147,6 +151,64 @@ class ProyectoBackendSwapltApplicationTests {
         } finally {
             SecurityContextHolder.clearContext();
         }
+    }
+
+    @Test
+    @Transactional
+    void createsResourcesWithIdsAndFlatResponses() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        User offerer = new User();
+        offerer.setName("Offerer");
+        offerer.setEmail("dto-offerer-" + suffix + "@example.com");
+        offerer.setPassword("password-hash");
+        userRepository.save(offerer);
+
+        User receiver = new User();
+        receiver.setName("Receiver");
+        receiver.setEmail("dto-receiver-" + suffix + "@example.com");
+        receiver.setPassword("password-hash");
+        userRepository.save(receiver);
+
+        Category category = new Category();
+        category.setName("Dto-" + suffix);
+        categoryRepository.save(category);
+
+        String itemBody = "{\"name\":\"Book\",\"categoryId\":" + category.getId()
+                + ",\"location\":\"Lima\",\"ownerId\":" + receiver.getId() + "}";
+        String offeredJson = mockMvc.perform(post("/api/items")
+                .header("Authorization", "Bearer " + jwtService.createToken(offerer))
+                .contentType("application/json").content(itemBody))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.ownerId").value(offerer.getId().intValue()))
+                .andExpect(jsonPath("$.user").doesNotExist())
+                .andExpect(jsonPath("$.password").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+        Long offeredItemId = new ObjectMapper().readTree(offeredJson).get("id").asLong();
+
+        String requestedJson = mockMvc.perform(post("/api/items")
+                .header("Authorization", "Bearer " + jwtService.createToken(receiver))
+                .contentType("application/json").content(itemBody))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        Long requestedItemId = new ObjectMapper().readTree(requestedJson).get("id").asLong();
+
+        String publicationJson = mockMvc.perform(post("/api/publications")
+                .header("Authorization", "Bearer " + jwtService.createToken(receiver))
+                .contentType("application/json")
+                .content("{\"itemId\":" + requestedItemId + ",\"wantedItem\":\"Book\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.itemId").value(requestedItemId.intValue()))
+                .andExpect(jsonPath("$.item").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+        Long publicationId = new ObjectMapper().readTree(publicationJson).get("id").asLong();
+
+        mockMvc.perform(post("/api/proposals")
+                .header("Authorization", "Bearer " + jwtService.createToken(offerer))
+                .contentType("application/json")
+                .content("{\"offeredItemId\":" + offeredItemId + ",\"publicationId\":" + publicationId + "}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.proposerId").value(offerer.getId().intValue()))
+                .andExpect(jsonPath("$.publicationId").value(publicationId.intValue()))
+                .andExpect(jsonPath("$.user").doesNotExist());
     }
 
 }
