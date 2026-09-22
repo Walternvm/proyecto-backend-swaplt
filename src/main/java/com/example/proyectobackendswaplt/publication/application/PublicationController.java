@@ -7,6 +7,8 @@ import com.example.proyectobackendswaplt.publication.domain.Publication;
 import com.example.proyectobackendswaplt.publication.infrastructure.PublicationRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +23,7 @@ public class PublicationController {
     private final PublicationRepository publicationRepository;
     private final ItemRepository itemRepository;
 
-    public record CreatePublication(@NotNull Long itemId, String wantedItem) {}
+    public record CreatePublication(@NotNull Long itemId, @NotBlank @Size(max = 120) String wantedItem) {}
 
     @PostMapping
     public ResponseEntity<?> create(@Valid @RequestBody CreatePublication request, Authentication authentication) {
