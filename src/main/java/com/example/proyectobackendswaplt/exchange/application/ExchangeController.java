@@ -2,6 +2,7 @@ package com.example.proyectobackendswaplt.exchange.application;
 
 import com.example.proyectobackendswaplt.exchange.domain.Exchange;
 import com.example.proyectobackendswaplt.exchange.domain.ExchangeService;
+import com.example.proyectobackendswaplt.exchange.dto.ExchangeResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,22 +16,22 @@ public class ExchangeController {
     private final ExchangeService exchangeService;
 
     @GetMapping
-    public ResponseEntity<List<Exchange>> findAll() {
-        return ResponseEntity.ok(exchangeService.findAll());
+    public ResponseEntity<List<ExchangeResponse>> findAll() {
+        return ResponseEntity.ok(exchangeService.findAll().stream().map(ExchangeResponse::from).toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Exchange> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(exchangeService.findById(id));
+    public ResponseEntity<ExchangeResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(ExchangeResponse.from(exchangeService.findById(id)));
     }
 
     @PutMapping("/{id}/complete")
-    public ResponseEntity<Exchange> complete(@PathVariable Long id) {
-        return ResponseEntity.ok(exchangeService.completeExchange(id));
+    public ResponseEntity<ExchangeResponse> complete(@PathVariable Long id) {
+        return ResponseEntity.ok(ExchangeResponse.from(exchangeService.completeExchange(id)));
     }
 
     @PutMapping("/{id}/cancel")
-    public ResponseEntity<Exchange> cancel(@PathVariable Long id) {
-        return ResponseEntity.ok(exchangeService.cancelExchange(id));
+    public ResponseEntity<ExchangeResponse> cancel(@PathVariable Long id) {
+        return ResponseEntity.ok(ExchangeResponse.from(exchangeService.cancelExchange(id)));
     }
 }

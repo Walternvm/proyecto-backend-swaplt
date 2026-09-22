@@ -2,6 +2,8 @@ package com.example.proyectobackendswaplt.category.application;
 
 import com.example.proyectobackendswaplt.category.domain.Category;
 import com.example.proyectobackendswaplt.category.domain.CategoryService;
+import com.example.proyectobackendswaplt.category.dto.CategoryRequest;
+import com.example.proyectobackendswaplt.category.dto.CategoryResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,19 +19,21 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping
-    public ResponseEntity<Category> create(@Valid @RequestBody Category category) {
-        Category created = categoryService.create(category);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<CategoryResponse> create(@Valid @RequestBody CategoryRequest request) {
+        Category category = new Category();
+        category.setName(request.name());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(CategoryResponse.from(categoryService.create(category)));
     }
 
     @GetMapping
-    public ResponseEntity<List<Category>> findAll() {
-        return ResponseEntity.ok(categoryService.findAll());
+    public ResponseEntity<List<CategoryResponse>> findAll() {
+        return ResponseEntity.ok(categoryService.findAll().stream().map(CategoryResponse::from).toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Category> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(categoryService.findById(id));
+    public ResponseEntity<CategoryResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(CategoryResponse.from(categoryService.findById(id)));
     }
 
     @DeleteMapping("/{id}")

@@ -7,6 +7,11 @@ import com.example.proyectobackendswaplt.item.domain.Item;
 import com.example.proyectobackendswaplt.item.domain.ItemState;
 import com.example.proyectobackendswaplt.item.infrastructure.ItemRepository;
 import com.example.proyectobackendswaplt.proposal.infrastructure.ProposalRepository;
+import com.example.proyectobackendswaplt.proposal.dto.ProposalRequest;
+import com.example.proyectobackendswaplt.publication.domain.Publication;
+import com.example.proyectobackendswaplt.publication.domain.PublicationStatus;
+import com.example.proyectobackendswaplt.publication.infrastructure.PublicationRepository;
+import com.example.proyectobackendswaplt.user.infrastructure.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,25 +29,30 @@ public class ProposalService {
     private final ProposalRepository proposalRepository;
     private final ItemRepository itemRepository;
     private final ExchangeRepository exchangeRepository;
+    private final PublicationRepository publicationRepository;
+    private final UserRepository userRepository;
 
-    public Proposal create(Proposal proposal) {
-        if (proposal.getOfferedItem() == null || proposal.getRequestedItem() == null
-                || proposal.getOfferedItem().getId() == null || proposal.getRequestedItem().getId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Two items are required");
-        }
-        Item offered = itemRepository.findById(proposal.getOfferedItem().getId()).orElseThrow(
+    public Proposal create(ProposalRequest request, String email) {
+        Item offered = itemRepository.findById(request.offeredItemId()).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offered item not found"));
-        Item requested = itemRepository.findById(proposal.getRequestedItem().getId()).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Requested item not found"));
-        if (!offered.getUser().getEmail().equals(currentEmail())) {
+        Publication publication = publicationRepository.findById(request.publicationId()).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Publication not found"));
+        Item requested = publication.getItem();
+        if (!offered.getUser().getEmail().equals(email)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         if (offered.getState() != ItemState.AVAILABLE || requested.getState() != ItemState.AVAILABLE
-                || offered.getId().equals(requested.getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Items must be different and available");
+                || offered.getId().equals(requested.getId())
+                || publication.getStatus() != PublicationStatus.ACTIVE
+                || requested.getUser().getEmail().equals(email)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Items and publication must be available");
         }
+        Proposal proposal = new Proposal();
+        proposal.setUser(userRepository.findByEmail(email).orElseThrow());
         proposal.setOfferedItem(offered);
         proposal.setRequestedItem(requested);
+        proposal.setPublication(publication);
+        proposal.setMessage(request.message());
         proposal.setStatus(ProposalStatus.PENDING);
         return proposalRepository.save(proposal);
     }

@@ -1,12 +1,14 @@
 package com.example.proyectobackendswaplt.review.application;
 
-import com.example.proyectobackendswaplt.review.domain.Review;
 import com.example.proyectobackendswaplt.review.domain.ReviewService;
+import com.example.proyectobackendswaplt.review.dto.ReviewRequest;
+import com.example.proyectobackendswaplt.review.dto.ReviewResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -17,18 +19,19 @@ public class ReviewController {
     private final ReviewService reviewService;
 
     @PostMapping
-    public ResponseEntity<Review> create(@Valid @RequestBody Review review) {
-        Review created = reviewService.create(review);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<ReviewResponse> create(@Valid @RequestBody ReviewRequest request,
+                                                 Authentication authentication) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ReviewResponse.from(reviewService.create(request, authentication.getName())));
     }
 
     @GetMapping
-    public ResponseEntity<List<Review>> findAll() {
-        return ResponseEntity.ok(reviewService.findAll());
+    public ResponseEntity<List<ReviewResponse>> findAll() {
+        return ResponseEntity.ok(reviewService.findAll().stream().map(ReviewResponse::from).toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Review> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(reviewService.findById(id));
+    public ResponseEntity<ReviewResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(ReviewResponse.from(reviewService.findById(id)));
     }
 }

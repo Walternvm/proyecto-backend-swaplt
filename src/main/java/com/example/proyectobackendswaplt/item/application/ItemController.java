@@ -1,8 +1,9 @@
 package com.example.proyectobackendswaplt.item.application;
 
-import com.example.proyectobackendswaplt.item.domain.Item;
 import com.example.proyectobackendswaplt.item.domain.ItemService;
-import com.example.proyectobackendswaplt.user.infrastructure.UserRepository;
+import com.example.proyectobackendswaplt.item.dto.ItemRequest;
+import com.example.proyectobackendswaplt.item.dto.ItemResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,23 +18,22 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ItemController {
     private final ItemService itemService;
-    private final UserRepository userRepository;
 
     @PostMapping
-    public ResponseEntity<Item> create(@RequestBody Item item, Authentication authentication) {
-        item.setUser(userRepository.findByEmail(authentication.getName()).orElseThrow());
-        Item created = itemService.create(item);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<ItemResponse> create(@Valid @RequestBody ItemRequest request,
+                                               Authentication authentication) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ItemResponse.from(itemService.create(request, authentication.getName())));
     }
 
     @GetMapping
-    public ResponseEntity<List<Item>> findAll() {
-        return ResponseEntity.ok(itemService.findAll());
+    public ResponseEntity<List<ItemResponse>> findAll() {
+        return ResponseEntity.ok(itemService.findAll().stream().map(ItemResponse::from).toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Item> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(itemService.findById(id));
+    public ResponseEntity<ItemResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(ItemResponse.from(itemService.findById(id)));
     }
 
     @DeleteMapping("/{id}")

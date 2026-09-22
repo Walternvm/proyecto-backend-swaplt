@@ -22,3 +22,15 @@ Ejecuta la aplicación con `sh ./mvnw spring-boot:run`. Para correr las pruebas,
 ## Publicaciones
 
 Un objeto pertenece a un usuario. Una publicación ofrece ese objeto para intercambio y guarda la fecha, el estado y el tipo de objeto deseado. Para crearla se usa `POST /api/publications` con `itemId` y `wantedItem`. Solo el dueño del objeto puede hacerlo.
+
+## Datos de la API
+
+Las solicitudes usan IDs para indicar relaciones. Por ejemplo:
+
+- `POST /api/categories`: `{ "name": "Libros" }` (solo ADMIN).
+- `POST /api/items`: `{ "name": "Novela", "description": "Buen estado", "categoryId": 1, "location": "Lima" }`.
+- `POST /api/publications`: `{ "itemId": 1, "wantedItem": "Juego de mesa" }`.
+- `POST /api/proposals`: `{ "offeredItemId": 2, "publicationId": 1, "message": "¿Intercambiamos?" }`.
+- `POST /api/reviews`: `{ "exchangeId": 1, "rating": 5, "comment": "Todo bien" }`.
+
+El servidor obtiene el usuario desde el token y decide los estados y fechas. Las respuestas incluyen IDs y datos simples como `ownerId`, `categoryId` y `status`; no incluyen la contraseña ni entidades anidadas.
