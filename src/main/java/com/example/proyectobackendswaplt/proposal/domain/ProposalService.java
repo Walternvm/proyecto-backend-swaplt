@@ -10,6 +10,9 @@ import com.example.proyectobackendswaplt.proposal.infrastructure.ProposalReposit
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashSet;
 import java.util.List;
@@ -23,6 +26,23 @@ public class ProposalService {
     private final ExchangeRepository exchangeRepository;
 
     public Proposal create(Proposal proposal) {
+        if (proposal.getOfferedItem() == null || proposal.getRequestedItem() == null
+                || proposal.getOfferedItem().getId() == null || proposal.getRequestedItem().getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Two items are required");
+        }
+        Item offered = itemRepository.findById(proposal.getOfferedItem().getId()).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offered item not found"));
+        Item requested = itemRepository.findById(proposal.getRequestedItem().getId()).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Requested item not found"));
+        if (!offered.getUser().getEmail().equals(currentEmail())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        if (offered.getState() != ItemState.AVAILABLE || requested.getState() != ItemState.AVAILABLE
+                || offered.getId().equals(requested.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Items must be different and available");
+        }
+        proposal.setOfferedItem(offered);
+        proposal.setRequestedItem(requested);
         proposal.setStatus(ProposalStatus.PENDING);
         return proposalRepository.save(proposal);
     }
@@ -39,6 +59,12 @@ public class ProposalService {
     @Transactional
     public Exchange acceptProposal(Long proposalId) {
         Proposal proposal = findById(proposalId);
+        if (!proposal.getRequestedItem().getUser().getEmail().equals(currentEmail())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        if (proposal.getStatus() != ProposalStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Proposal is not pending");
+        }
 
         Item offeredItem = proposal.getOfferedItem();
         Item requestedItem = proposal.getRequestedItem();
@@ -70,14 +96,10 @@ public class ProposalService {
 
     private void invalidateOtherPendingProposals(Proposal accepted, Item offeredItem, Item requestedItem) {
         Set<Proposal> toInvalidate = new HashSet<>();
-        toInvalidate.addAll(
-                proposalRepository.findByStatusAndOfferedItemOrRequestedItem(
-                        ProposalStatus.PENDING, offeredItem, offeredItem)
-        );
-        toInvalidate.addAll(
-                proposalRepository.findByStatusAndOfferedItemOrRequestedItem(
-                        ProposalStatus.PENDING, requestedItem, requestedItem)
-        );
+        toInvalidate.addAll(proposalRepository.findByStatusAndOfferedItem(ProposalStatus.PENDING, offeredItem));
+        toInvalidate.addAll(proposalRepository.findByStatusAndRequestedItem(ProposalStatus.PENDING, offeredItem));
+        toInvalidate.addAll(proposalRepository.findByStatusAndOfferedItem(ProposalStatus.PENDING, requestedItem));
+        toInvalidate.addAll(proposalRepository.findByStatusAndRequestedItem(ProposalStatus.PENDING, requestedItem));
         toInvalidate.remove(accepted);
 
         for (Proposal p : toInvalidate) {
@@ -89,7 +111,17 @@ public class ProposalService {
     @Transactional
     public void rejectProposal(Long proposalId) {
         Proposal proposal = findById(proposalId);
+        if (!proposal.getRequestedItem().getUser().getEmail().equals(currentEmail())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        if (proposal.getStatus() != ProposalStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Proposal is not pending");
+        }
         proposal.setStatus(ProposalStatus.REJECTED);
         proposalRepository.save(proposal);
+    }
+
+    private String currentEmail() {
+        return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 }

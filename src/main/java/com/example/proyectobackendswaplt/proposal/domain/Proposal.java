@@ -2,7 +2,9 @@ package com.example.proyectobackendswaplt.proposal.domain;
 
 import com.example.proyectobackendswaplt.item.domain.Item;
 import com.example.proyectobackendswaplt.user.domain.User;
+import com.example.proyectobackendswaplt.publication.domain.Publication;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,20 +21,28 @@ public class Proposal {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne
-    @JoinColumn(name = "offered_item_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "offered_item_id", nullable = false)
     private Item offeredItem;
 
-    @ManyToOne
-    @JoinColumn(name = "requested_item_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requested_item_id", nullable = false)
     private Item requestedItem;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "publication_id")
+    private Publication publication;
+
+    @Column(nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
     @Enumerated(EnumType.STRING)
-    private ProposalStatus status;
+    @Column(nullable = false)
+    private ProposalStatus status = ProposalStatus.PENDING;
 
     private String message;
 }
