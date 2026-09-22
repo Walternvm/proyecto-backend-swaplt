@@ -3,10 +3,12 @@ package com.example.proyectobackendswaplt.proposal.application;
 import com.example.proyectobackendswaplt.exchange.domain.Exchange;
 import com.example.proyectobackendswaplt.proposal.domain.Proposal;
 import com.example.proyectobackendswaplt.proposal.domain.ProposalService;
+import com.example.proyectobackendswaplt.user.infrastructure.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -15,9 +17,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProposalController {
     private final ProposalService proposalService;
+    private final UserRepository userRepository;
 
     @PostMapping
-    public ResponseEntity<Proposal> create(@RequestBody Proposal proposal) {
+    public ResponseEntity<Proposal> create(@RequestBody Proposal proposal, Authentication authentication) {
+        proposal.setUser(userRepository.findByEmail(authentication.getName()).orElseThrow());
         Proposal created = proposalService.create(proposal);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }

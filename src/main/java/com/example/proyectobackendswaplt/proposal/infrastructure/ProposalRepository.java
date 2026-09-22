@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ProposalRepository extends JpaRepository<Proposal, Long> {
-    List<Proposal> findByStatusAndOfferedItemOrRequestedItem(
-            ProposalStatus status, Item offeredItem, Item requestedItem
-    );
+    List<Proposal> findByStatusAndOfferedItem(ProposalStatus status, Item offeredItem);
+    List<Proposal> findByStatusAndRequestedItem(ProposalStatus status, Item requestedItem);
 }

@@ -19,18 +19,19 @@ public class Exchange {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
-    @JoinColumn(name = "proposal_id")
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "proposal_id", nullable = false, unique = true)
     private Proposal proposal;
 
-    @ManyToOne
-    @JoinColumn(name = "offering_user_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "offering_user_id", nullable = false)
     private User offeringUser;
 
-    @ManyToOne
-    @JoinColumn(name = "receiving_user_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receiving_user_id", nullable = false)
     private User receivingUser;
 
     @Enumerated(EnumType.STRING)
-    private ExchangeStatus status;
+    @Column(nullable = false)
+    private ExchangeStatus status = ExchangeStatus.PENDING;
 }
