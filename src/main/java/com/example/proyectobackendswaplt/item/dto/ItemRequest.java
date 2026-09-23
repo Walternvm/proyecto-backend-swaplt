@@ -8,5 +8,6 @@ public record ItemRequest(
         @NotBlank @Size(max = 120) String name,
         @Size(max = 1000) String description,
         @NotNull Long categoryId,
-        @NotBlank @Size(max = 120) String location) {
+        @NotBlank @Size(max = 120) String location,
+        @NotBlank @Size(max = 120) String wantedItem) {
 }

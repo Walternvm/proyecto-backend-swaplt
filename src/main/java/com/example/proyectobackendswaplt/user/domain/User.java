@@ -2,7 +2,6 @@ package com.example.proyectobackendswaplt.user.domain;
 
 import com.example.proyectobackendswaplt.category.domain.Category;
 import com.example.proyectobackendswaplt.item.domain.Item;
-import com.example.proyectobackendswaplt.publication.domain.Publication;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.Email;
@@ -56,18 +55,14 @@ public class User {
     private List<Item> items = new ArrayList<>();
 
     @JsonIgnore
-    @OneToMany(mappedBy = "user")
-    private List<Publication> publications = new ArrayList<>();
-
-    @JsonIgnore
     @ManyToMany
     @JoinTable(
             name = "favorites",
             joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "publication_id"),
-            uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "publication_id"})
+            inverseJoinColumns = @JoinColumn(name = "item_id"),
+            uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "item_id"})
     )
-    private List<Publication> favorites = new ArrayList<>();
+    private List<Item> favorites = new ArrayList<>();
 
     @JsonIgnore
     @ManyToMany
