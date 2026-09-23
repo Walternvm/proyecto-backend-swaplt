@@ -2,6 +2,7 @@ package com.example.proyectobackendswaplt.auth;
 
 import com.example.proyectobackendswaplt.auth.dto.AuthResponse;
 import com.example.proyectobackendswaplt.auth.dto.LoginRequest;
+import com.example.proyectobackendswaplt.auth.dto.RefreshTokenRequest;
 import com.example.proyectobackendswaplt.auth.dto.RegisterRequest;
 import com.example.proyectobackendswaplt.common.exception.ConflictException;
 import com.example.proyectobackendswaplt.common.exception.InvalidCredentialsException;
@@ -19,6 +20,7 @@ public class AuthService {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -29,12 +31,23 @@ public class AuthService {
         return toResponse(user);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         User user = userService.findByEmail(request.email())
                 .filter(found -> passwordEncoder.matches(request.password(), found.getPassword()))
                 .orElseThrow(InvalidCredentialsException::new);
         return toResponse(user);
+    }
+
+    @Transactional
+    public AuthResponse refresh(RefreshTokenRequest request) {
+        User user = refreshTokenService.consume(request.refreshToken());
+        return toResponse(user);
+    }
+
+    @Transactional
+    public void logout(RefreshTokenRequest request) {
+        refreshTokenService.revoke(request.refreshToken());
     }
 
     @Transactional
@@ -56,6 +69,7 @@ public class AuthService {
     }
 
     private AuthResponse toResponse(User user) {
-        return new AuthResponse(jwtService.createToken(user), user.getId(), user.getRole().name());
+        return new AuthResponse(jwtService.createToken(user), refreshTokenService.create(user),
+                user.getId(), user.getRole().name());
     }
 }

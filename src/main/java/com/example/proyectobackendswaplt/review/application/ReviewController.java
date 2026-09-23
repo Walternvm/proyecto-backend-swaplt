@@ -7,8 +7,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -26,8 +26,8 @@ public class ReviewController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ReviewResponse>> findAll() {
-        return ResponseEntity.ok(reviewService.findAll().stream().map(ReviewResponse::from).toList());
+    public ResponseEntity<List<ReviewResponse>> findAll(@RequestParam(required = false) Long userId) {
+        return ResponseEntity.ok(reviewService.findAll(userId).stream().map(ReviewResponse::from).toList());
     }
 
     @GetMapping("/{id}")

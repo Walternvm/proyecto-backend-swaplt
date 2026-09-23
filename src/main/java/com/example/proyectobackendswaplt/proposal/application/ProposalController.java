@@ -1,15 +1,15 @@
 package com.example.proyectobackendswaplt.proposal.application;
 
+import com.example.proyectobackendswaplt.exchange.dto.ExchangeResponse;
 import com.example.proyectobackendswaplt.proposal.domain.ProposalService;
 import com.example.proyectobackendswaplt.proposal.dto.ProposalRequest;
 import com.example.proyectobackendswaplt.proposal.dto.ProposalResponse;
-import com.example.proyectobackendswaplt.exchange.dto.ExchangeResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -28,12 +28,12 @@ public class ProposalController {
 
     @GetMapping
     public ResponseEntity<List<ProposalResponse>> findAll() {
-        return ResponseEntity.ok(proposalService.findAll().stream().map(ProposalResponse::from).toList());
+        return ResponseEntity.ok(proposalService.findAllVisible().stream().map(ProposalResponse::from).toList());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ProposalResponse> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(ProposalResponse.from(proposalService.findById(id)));
+        return ResponseEntity.ok(ProposalResponse.from(proposalService.findVisibleById(id)));
     }
 
     @PutMapping("/{id}/accept")

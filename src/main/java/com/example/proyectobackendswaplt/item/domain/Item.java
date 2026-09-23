@@ -52,6 +52,10 @@ public class Item {
     @Column(nullable = false)
     private ItemState state = ItemState.AVAILABLE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "item_condition", length = 20)
+    private ItemCondition condition;
+
     @NotBlank
     @Size(max = 120)
     @Column(nullable = false, length = 120)

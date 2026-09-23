@@ -1,5 +1,6 @@
 package com.example.proyectobackendswaplt.proposal.domain;
 
+import com.example.proyectobackendswaplt.auth.CurrentUserService;
 import com.example.proyectobackendswaplt.common.exception.ConflictException;
 import com.example.proyectobackendswaplt.common.exception.ForbiddenException;
 import com.example.proyectobackendswaplt.common.exception.ResourceNotFoundException;
@@ -13,9 +14,9 @@ import com.example.proyectobackendswaplt.proposal.infrastructure.ProposalReposit
 import com.example.proyectobackendswaplt.publication.domain.Publication;
 import com.example.proyectobackendswaplt.publication.domain.PublicationService;
 import com.example.proyectobackendswaplt.publication.domain.PublicationStatus;
+import com.example.proyectobackendswaplt.user.domain.User;
 import com.example.proyectobackendswaplt.user.domain.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,7 @@ public class ProposalService {
     private final PublicationService publicationService;
     private final UserService userService;
     private final ExchangeService exchangeService;
+    private final CurrentUserService currentUserService;
 
     @Transactional
     public Proposal create(ProposalRequest request, String email) {
@@ -56,8 +58,20 @@ public class ProposalService {
         return proposalRepository.save(proposal);
     }
 
-    public List<Proposal> findAll() {
-        return proposalRepository.findAll();
+    public List<Proposal> findAllVisible() {
+        if (currentUserService.isAdmin()) {
+            return proposalRepository.findAll();
+        }
+        User current = currentUserService.get();
+        return proposalRepository.findByUserOrRequestedItemUserOrderByCreatedAtDesc(current, current);
+    }
+
+    public Proposal findVisibleById(Long id) {
+        Proposal proposal = findById(id);
+        if (!currentUserService.isAdmin() && !isParticipant(proposal, currentUserService.email())) {
+            throw new ForbiddenException();
+        }
+        return proposal;
     }
 
     public Proposal findById(Long id) {
@@ -68,7 +82,7 @@ public class ProposalService {
     @Transactional
     public Exchange acceptProposal(Long proposalId) {
         Proposal proposal = findById(proposalId);
-        if (!proposal.getRequestedItem().getUser().getEmail().equals(currentEmail())) {
+        if (!proposal.getRequestedItem().getUser().getEmail().equals(currentUserService.email())) {
             throw new ForbiddenException();
         }
         if (proposal.getStatus() != ProposalStatus.PENDING) {
@@ -113,7 +127,7 @@ public class ProposalService {
     @Transactional
     public void rejectProposal(Long proposalId) {
         Proposal proposal = findById(proposalId);
-        if (!proposal.getRequestedItem().getUser().getEmail().equals(currentEmail())) {
+        if (!proposal.getRequestedItem().getUser().getEmail().equals(currentUserService.email())) {
             throw new ForbiddenException();
         }
         if (proposal.getStatus() != ProposalStatus.PENDING) {
@@ -123,7 +137,8 @@ public class ProposalService {
         proposalRepository.save(proposal);
     }
 
-    private String currentEmail() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
+    private boolean isParticipant(Proposal proposal, String email) {
+        return proposal.getUser().getEmail().equals(email)
+                || proposal.getRequestedItem().getUser().getEmail().equals(email);
     }
 }

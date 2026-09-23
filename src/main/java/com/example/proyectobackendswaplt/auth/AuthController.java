@@ -2,6 +2,7 @@ package com.example.proyectobackendswaplt.auth;
 
 import com.example.proyectobackendswaplt.auth.dto.AuthResponse;
 import com.example.proyectobackendswaplt.auth.dto.LoginRequest;
+import com.example.proyectobackendswaplt.auth.dto.RefreshTokenRequest;
 import com.example.proyectobackendswaplt.auth.dto.RegisterRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,5 +24,16 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refresh(request));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.logout(request);
+        return ResponseEntity.noContent().build();
     }
 }

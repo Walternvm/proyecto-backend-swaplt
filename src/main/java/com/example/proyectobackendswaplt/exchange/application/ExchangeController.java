@@ -1,6 +1,5 @@
 package com.example.proyectobackendswaplt.exchange.application;
 
-import com.example.proyectobackendswaplt.exchange.domain.Exchange;
 import com.example.proyectobackendswaplt.exchange.domain.ExchangeService;
 import com.example.proyectobackendswaplt.exchange.dto.ExchangeResponse;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +16,12 @@ public class ExchangeController {
 
     @GetMapping
     public ResponseEntity<List<ExchangeResponse>> findAll() {
-        return ResponseEntity.ok(exchangeService.findAll().stream().map(ExchangeResponse::from).toList());
+        return ResponseEntity.ok(exchangeService.findAllVisible().stream().map(ExchangeResponse::from).toList());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ExchangeResponse> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(ExchangeResponse.from(exchangeService.findById(id)));
+        return ResponseEntity.ok(ExchangeResponse.from(exchangeService.findVisibleById(id)));
     }
 
     @PutMapping("/{id}/complete")
