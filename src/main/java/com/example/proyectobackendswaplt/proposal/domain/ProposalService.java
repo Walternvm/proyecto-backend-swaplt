@@ -1,20 +1,23 @@
 package com.example.proyectobackendswaplt.proposal.domain;
 
+import com.example.proyectobackendswaplt.common.exception.ConflictException;
+import com.example.proyectobackendswaplt.common.exception.ForbiddenException;
+import com.example.proyectobackendswaplt.common.exception.ResourceNotFoundException;
 import com.example.proyectobackendswaplt.exchange.domain.Exchange;
-import com.example.proyectobackendswaplt.exchange.domain.ExchangeStatus;
-import com.example.proyectobackendswaplt.exchange.infrastructure.ExchangeRepository;
+import com.example.proyectobackendswaplt.exchange.domain.ExchangeService;
 import com.example.proyectobackendswaplt.item.domain.Item;
+import com.example.proyectobackendswaplt.item.domain.ItemService;
 import com.example.proyectobackendswaplt.item.domain.ItemState;
-import com.example.proyectobackendswaplt.item.infrastructure.ItemRepository;
-import com.example.proyectobackendswaplt.proposal.infrastructure.ProposalRepository;
 import com.example.proyectobackendswaplt.proposal.dto.ProposalRequest;
-import com.example.proyectobackendswaplt.user.infrastructure.UserRepository;
+import com.example.proyectobackendswaplt.proposal.infrastructure.ProposalRepository;
+import com.example.proyectobackendswaplt.publication.domain.Publication;
+import com.example.proyectobackendswaplt.publication.domain.PublicationService;
+import com.example.proyectobackendswaplt.publication.domain.PublicationStatus;
+import com.example.proyectobackendswaplt.user.domain.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashSet;
 import java.util.List;
@@ -24,27 +27,30 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class ProposalService {
     private final ProposalRepository proposalRepository;
-    private final ItemRepository itemRepository;
-    private final ExchangeRepository exchangeRepository;
-    private final UserRepository userRepository;
+    private final ItemService itemService;
+    private final PublicationService publicationService;
+    private final UserService userService;
+    private final ExchangeService exchangeService;
 
+    @Transactional
     public Proposal create(ProposalRequest request, String email) {
-        Item offered = itemRepository.findById(request.offeredItemId()).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offered item not found"));
-        Item requested = itemRepository.findById(request.requestedItemId()).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Requested item not found"));
+        Item offered = itemService.findById(request.offeredItemId());
+        Publication publication = publicationService.findById(request.publicationId());
+        Item requested = publication.getItem();
         if (!offered.getUser().getEmail().equals(email)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            throw new ForbiddenException();
         }
         if (offered.getState() != ItemState.AVAILABLE || requested.getState() != ItemState.AVAILABLE
                 || offered.getId().equals(requested.getId())
+                || publication.getStatus() != PublicationStatus.ACTIVE
                 || requested.getUser().getEmail().equals(email)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Items must be different and available");
+            throw new ConflictException("Item y publicacion deben estar disponibles");
         }
         Proposal proposal = new Proposal();
-        proposal.setUser(userRepository.findByEmail(email).orElseThrow());
+        proposal.setUser(userService.getByEmail(email));
         proposal.setOfferedItem(offered);
         proposal.setRequestedItem(requested);
+        proposal.setPublication(publication);
         proposal.setMessage(request.message());
         proposal.setStatus(ProposalStatus.PENDING);
         return proposalRepository.save(proposal);
@@ -56,17 +62,17 @@ public class ProposalService {
 
     public Proposal findById(Long id) {
         return proposalRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Proposal not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Propuesta", id));
     }
 
     @Transactional
     public Exchange acceptProposal(Long proposalId) {
         Proposal proposal = findById(proposalId);
         if (!proposal.getRequestedItem().getUser().getEmail().equals(currentEmail())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            throw new ForbiddenException();
         }
         if (proposal.getStatus() != ProposalStatus.PENDING) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Proposal is not pending");
+            throw new ConflictException("Propuesta no pendiente");
         }
 
         Item offeredItem = proposal.getOfferedItem();
@@ -74,23 +80,16 @@ public class ProposalService {
 
         if (offeredItem.getState() != ItemState.AVAILABLE
                 || requestedItem.getState() != ItemState.AVAILABLE) {
-            throw new RuntimeException("One or both items are no longer available");
+            throw new ConflictException("Uno o ambos items ya no estan disponibles");
         }
 
-        offeredItem.setState(ItemState.RESERVED);
-        requestedItem.setState(ItemState.RESERVED);
-        itemRepository.save(offeredItem);
-        itemRepository.save(requestedItem);
+        itemService.markReserved(offeredItem);
+        itemService.markReserved(requestedItem);
 
         proposal.setStatus(ProposalStatus.ACCEPTED);
         proposalRepository.save(proposal);
 
-        Exchange exchange = new Exchange();
-        exchange.setProposal(proposal);
-        exchange.setOfferingUser(proposal.getUser());
-        exchange.setReceivingUser(requestedItem.getUser());
-        exchange.setStatus(ExchangeStatus.PENDING);
-        exchange = exchangeRepository.save(exchange);
+        Exchange exchange = exchangeService.createFromProposal(proposal);
 
         invalidateOtherPendingProposals(proposal, offeredItem, requestedItem);
 
@@ -115,10 +114,10 @@ public class ProposalService {
     public void rejectProposal(Long proposalId) {
         Proposal proposal = findById(proposalId);
         if (!proposal.getRequestedItem().getUser().getEmail().equals(currentEmail())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            throw new ForbiddenException();
         }
         if (proposal.getStatus() != ProposalStatus.PENDING) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Proposal is not pending");
+            throw new ConflictException("Propuesta no pendiente");
         }
         proposal.setStatus(ProposalStatus.REJECTED);
         proposalRepository.save(proposal);

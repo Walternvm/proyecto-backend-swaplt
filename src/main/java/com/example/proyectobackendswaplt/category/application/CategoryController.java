@@ -1,6 +1,5 @@
 package com.example.proyectobackendswaplt.category.application;
 
-import com.example.proyectobackendswaplt.category.domain.Category;
 import com.example.proyectobackendswaplt.category.domain.CategoryService;
 import com.example.proyectobackendswaplt.category.dto.CategoryRequest;
 import com.example.proyectobackendswaplt.category.dto.CategoryResponse;
@@ -20,10 +19,8 @@ public class CategoryController {
 
     @PostMapping
     public ResponseEntity<CategoryResponse> create(@Valid @RequestBody CategoryRequest request) {
-        Category category = new Category();
-        category.setName(request.name());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(CategoryResponse.from(categoryService.create(category)));
+                .body(CategoryResponse.from(categoryService.create(request)));
     }
 
     @GetMapping
