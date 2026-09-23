@@ -15,8 +15,6 @@ import com.example.proyectobackendswaplt.user.domain.User;
 import com.example.proyectobackendswaplt.user.infrastructure.UserRepository;
 import com.example.proyectobackendswaplt.item.domain.Item;
 import com.example.proyectobackendswaplt.item.infrastructure.ItemRepository;
-import com.example.proyectobackendswaplt.publication.domain.Publication;
-import com.example.proyectobackendswaplt.publication.infrastructure.PublicationRepository;
 import com.example.proyectobackendswaplt.proposal.domain.Proposal;
 import com.example.proyectobackendswaplt.proposal.infrastructure.ProposalRepository;
 import com.example.proyectobackendswaplt.proposal.domain.ProposalService;
@@ -48,8 +46,6 @@ class ProyectoBackendSwapltApplicationTests {
     private CategoryRepository categoryRepository;
     @Autowired
     private ItemRepository itemRepository;
-    @Autowired
-    private PublicationRepository publicationRepository;
     @Autowired
     private ProposalRepository proposalRepository;
     @Autowired
@@ -83,9 +79,9 @@ class ProyectoBackendSwapltApplicationTests {
         category.setName(" ");
         assertFalse(validator.validate(category).isEmpty());
 
-        Publication publication = new Publication();
-        publication.setWantedItem(" ");
-        assertTrue(validator.validate(publication).stream()
+        Item item = new Item();
+        item.setWantedItem(" ");
+        assertTrue(validator.validate(item).stream()
                 .anyMatch(violation -> violation.getPropertyPath().toString().equals("wantedItem")));
 
         Review review = new Review();
@@ -119,6 +115,7 @@ class ProyectoBackendSwapltApplicationTests {
         offered.setCategory(category);
         offered.setName("Book");
         offered.setLocation("Lima");
+        offered.setWantedItem("Game");
         itemRepository.save(offered);
 
         Item requested = new Item();
@@ -126,19 +123,13 @@ class ProyectoBackendSwapltApplicationTests {
         requested.setCategory(category);
         requested.setName("Game");
         requested.setLocation("Lima");
+        requested.setWantedItem("Book");
         itemRepository.save(requested);
-
-        Publication publication = new Publication();
-        publication.setUser(receiver);
-        publication.setItem(requested);
-        publication.setWantedItem("Book");
-        publicationRepository.save(publication);
 
         Proposal proposal = new Proposal();
         proposal.setUser(offerer);
         proposal.setOfferedItem(offered);
         proposal.setRequestedItem(requested);
-        proposal.setPublication(publication);
         proposalRepository.save(proposal);
 
         SecurityContextHolder.getContext().setAuthentication(
@@ -155,7 +146,7 @@ class ProyectoBackendSwapltApplicationTests {
 
     @Test
     @Transactional
-    void createsResourcesWithIdsAndFlatResponses() throws Exception {
+    void createsItemsAndProposalWithIdsAndFlatResponses() throws Exception {
         String suffix = UUID.randomUUID().toString();
         User offerer = new User();
         offerer.setName("Offerer");
@@ -174,7 +165,7 @@ class ProyectoBackendSwapltApplicationTests {
         categoryRepository.save(category);
 
         String itemBody = "{\"name\":\"Book\",\"categoryId\":" + category.getId()
-                + ",\"location\":\"Lima\",\"ownerId\":" + receiver.getId() + "}";
+                + ",\"location\":\"Lima\",\"wantedItem\":\"Game\",\"ownerId\":" + receiver.getId() + "}";
         String offeredJson = mockMvc.perform(post("/api/items")
                 .header("Authorization", "Bearer " + jwtService.createToken(offerer))
                 .contentType("application/json").content(itemBody))
@@ -191,23 +182,13 @@ class ProyectoBackendSwapltApplicationTests {
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         Long requestedItemId = new ObjectMapper().readTree(requestedJson).get("id").asLong();
 
-        String publicationJson = mockMvc.perform(post("/api/publications")
-                .header("Authorization", "Bearer " + jwtService.createToken(receiver))
-                .contentType("application/json")
-                .content("{\"itemId\":" + requestedItemId + ",\"wantedItem\":\"Book\"}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.itemId").value(requestedItemId.intValue()))
-                .andExpect(jsonPath("$.item").doesNotExist())
-                .andReturn().getResponse().getContentAsString();
-        Long publicationId = new ObjectMapper().readTree(publicationJson).get("id").asLong();
-
         mockMvc.perform(post("/api/proposals")
                 .header("Authorization", "Bearer " + jwtService.createToken(offerer))
                 .contentType("application/json")
-                .content("{\"offeredItemId\":" + offeredItemId + ",\"publicationId\":" + publicationId + "}"))
+                .content("{\"offeredItemId\":" + offeredItemId + ",\"requestedItemId\":" + requestedItemId + "}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.proposerId").value(offerer.getId().intValue()))
-                .andExpect(jsonPath("$.publicationId").value(publicationId.intValue()))
+                .andExpect(jsonPath("$.requestedItemId").value(requestedItemId.intValue()))
                 .andExpect(jsonPath("$.user").doesNotExist());
     }
 

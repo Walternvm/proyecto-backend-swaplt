@@ -6,8 +6,9 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
-import com.example.proyectobackendswaplt.publication.domain.Publication;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.example.proyectobackendswaplt.proposal.domain.Proposal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -57,7 +58,16 @@ public class Item {
     @Column(nullable = false, length = 120)
     private String location;
 
+    @NotBlank
+    @Size(max = 120)
+    @Column(nullable = false, length = 120)
+    private String wantedItem;
+
+    @NotNull
+    @Column(nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
     @JsonIgnore
-    @OneToMany(mappedBy = "item")
-    private List<Publication> publications = new ArrayList<>();
+    @OneToMany(mappedBy = "requestedItem")
+    private List<Proposal> receivedProposals = new ArrayList<>();
 }

@@ -23,6 +23,7 @@ public class ItemService {
         item.setName(request.name());
         item.setDescription(request.description());
         item.setLocation(request.location());
+        item.setWantedItem(request.wantedItem());
         item.setUser(userRepository.findByEmail(email).orElseThrow());
         item.setCategory(categoryRepository.findById(request.categoryId()).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found")));

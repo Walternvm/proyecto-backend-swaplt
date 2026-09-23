@@ -2,7 +2,6 @@ package com.example.proyectobackendswaplt.proposal.domain;
 
 import com.example.proyectobackendswaplt.item.domain.Item;
 import com.example.proyectobackendswaplt.user.domain.User;
-import com.example.proyectobackendswaplt.publication.domain.Publication;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -37,10 +36,6 @@ public class Proposal {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requested_item_id", nullable = false)
     private Item requestedItem;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "publication_id")
-    private Publication publication;
 
     @NotNull
     @Column(nullable = false)
