@@ -1,6 +1,8 @@
 package com.example.proyectobackendswaplt.category.domain;
 
+import com.example.proyectobackendswaplt.category.dto.CategoryRequest;
 import com.example.proyectobackendswaplt.category.infrastructure.CategoryRepository;
+import com.example.proyectobackendswaplt.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -12,7 +14,9 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
-    public Category create(Category category) {
+    public Category create(CategoryRequest request) {
+        Category category = new Category();
+        category.setName(request.name());
         return categoryRepository.save(category);
     }
 
@@ -22,7 +26,7 @@ public class CategoryService {
 
     public Category findById(Long id) {
         return categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria", id));
     }
 
     public void delete(Long id) {

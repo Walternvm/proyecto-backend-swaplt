@@ -7,9 +7,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -38,10 +37,7 @@ public class ItemController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication) {
-        if (!itemService.findById(id).getUser().getEmail().equals(authentication.getName())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-        itemService.delete(id);
+        itemService.delete(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 }

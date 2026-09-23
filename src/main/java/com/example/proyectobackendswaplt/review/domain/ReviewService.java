@@ -1,15 +1,16 @@
 package com.example.proyectobackendswaplt.review.domain;
 
+import com.example.proyectobackendswaplt.common.exception.ConflictException;
+import com.example.proyectobackendswaplt.common.exception.ForbiddenException;
+import com.example.proyectobackendswaplt.common.exception.ResourceNotFoundException;
 import com.example.proyectobackendswaplt.exchange.domain.Exchange;
+import com.example.proyectobackendswaplt.exchange.domain.ExchangeService;
 import com.example.proyectobackendswaplt.exchange.domain.ExchangeStatus;
-import com.example.proyectobackendswaplt.review.infrastructure.ReviewRepository;
-import com.example.proyectobackendswaplt.exchange.infrastructure.ExchangeRepository;
 import com.example.proyectobackendswaplt.review.dto.ReviewRequest;
+import com.example.proyectobackendswaplt.review.infrastructure.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -17,15 +18,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReviewService {
     private final ReviewRepository reviewRepository;
-    private final ExchangeRepository exchangeRepository;
+    private final ExchangeService exchangeService;
 
     @Transactional
     public Review create(ReviewRequest request, String email) {
-        Exchange exchange = exchangeRepository.findById(request.exchangeId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Exchange exchange = exchangeService.findById(request.exchangeId());
 
         if (exchange.getStatus() != ExchangeStatus.COMPLETED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Exchange is not completed");
+            throw new ConflictException("Intercambio no completado");
         }
 
         Review review = new Review();
@@ -38,7 +38,7 @@ public class ReviewService {
             review.setAuthor(exchange.getReceivingUser());
             review.setReceiver(exchange.getOfferingUser());
         } else {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            throw new ForbiddenException();
         }
         review.setExchange(exchange);
 
@@ -51,6 +51,6 @@ public class ReviewService {
 
     public Review findById(Long id) {
         return reviewRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Review not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Review", id));
     }
 }

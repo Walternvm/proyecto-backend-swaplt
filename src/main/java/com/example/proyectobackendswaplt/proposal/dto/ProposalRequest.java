@@ -3,6 +3,6 @@ package com.example.proyectobackendswaplt.proposal.dto;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public record ProposalRequest(@NotNull Long offeredItemId, @NotNull Long requestedItemId,
+public record ProposalRequest(@NotNull Long offeredItemId, @NotNull Long publicationId,
                               @Size(max = 1000) String message) {
 }
