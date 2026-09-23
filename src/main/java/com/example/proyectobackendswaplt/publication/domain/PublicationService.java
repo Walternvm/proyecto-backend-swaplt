@@ -32,6 +32,9 @@ public class PublicationService {
         if (item.getState() != ItemState.AVAILABLE) {
             throw new ConflictException("Item no disponible");
         }
+        if (publicationRepository.existsByItemIdAndStatus(item.getId(), PublicationStatus.ACTIVE)) {
+            throw new ConflictException("Este item ya tiene una publicacion activa");
+        }
         Publication publication = new Publication();
         publication.setItem(item);
         publication.setUser(item.getUser());
@@ -54,5 +57,11 @@ public class PublicationService {
         }
         return publicationRepository.findByStatusAndItemCategoryInAndUserNotOrderByCreatedAtDesc(
                 PublicationStatus.ACTIVE, categories, user);
+    }
+
+    public void closeActiveByItem(Item item) {
+        List<Publication> active = publicationRepository.findByItemIdAndStatus(item.getId(), PublicationStatus.ACTIVE);
+        active.forEach(publication -> publication.setStatus(PublicationStatus.CLOSED));
+        publicationRepository.saveAll(active);
     }
 }

@@ -26,7 +26,7 @@ public class ExchangeController {
 
     @PutMapping("/{id}/complete")
     public ResponseEntity<ExchangeResponse> complete(@PathVariable Long id) {
-        return ResponseEntity.ok(ExchangeResponse.from(exchangeService.completeExchange(id)));
+        return ResponseEntity.ok(ExchangeResponse.from(exchangeService.confirmExchange(id)));
     }
 
     @PutMapping("/{id}/cancel")

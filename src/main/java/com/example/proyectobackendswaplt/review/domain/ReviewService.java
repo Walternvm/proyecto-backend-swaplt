@@ -28,25 +28,19 @@ public class ReviewService {
     @Transactional
     public Review create(ReviewRequest request, String email) {
         Exchange exchange = exchangeService.findById(request.exchangeId());
+        Review review = new Review();
+        assignParticipants(review, exchange, email);
 
         if (exchange.getStatus() != ExchangeStatus.COMPLETED) {
-            throw new ConflictException("Intercambio no completado");
+            throw new ConflictException("Solo puedes calificar intercambios completados");
+        }
+        if (reviewRepository.existsByExchangeIdAndAuthorId(exchange.getId(), review.getAuthor().getId())) {
+            throw new ConflictException("Ya calificaste este intercambio");
         }
 
-        Review review = new Review();
+        review.setExchange(exchange);
         review.setRating(request.rating());
         review.setComment(request.comment());
-        if (exchange.getOfferingUser().getEmail().equals(email)) {
-            review.setAuthor(exchange.getOfferingUser());
-            review.setReceiver(exchange.getReceivingUser());
-        } else if (exchange.getReceivingUser().getEmail().equals(email)) {
-            review.setAuthor(exchange.getReceivingUser());
-            review.setReceiver(exchange.getOfferingUser());
-        } else {
-            throw new ForbiddenException();
-        }
-        review.setExchange(exchange);
-
         return reviewRepository.save(review);
     }
 
@@ -65,5 +59,17 @@ public class ReviewService {
     public Review findById(Long id) {
         return reviewRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Review", id));
+    }
+
+    private void assignParticipants(Review review, Exchange exchange, String email) {
+        if (exchange.getOfferingUser().getEmail().equals(email)) {
+            review.setAuthor(exchange.getOfferingUser());
+            review.setReceiver(exchange.getReceivingUser());
+        } else if (exchange.getReceivingUser().getEmail().equals(email)) {
+            review.setAuthor(exchange.getReceivingUser());
+            review.setReceiver(exchange.getOfferingUser());
+        } else {
+            throw new ForbiddenException("Solo los participantes del intercambio pueden calificarlo");
+        }
     }
 }

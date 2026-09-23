@@ -1,6 +1,7 @@
 package com.example.proyectobackendswaplt.item.domain;
 
 import com.example.proyectobackendswaplt.category.domain.CategoryService;
+import com.example.proyectobackendswaplt.common.exception.ConflictException;
 import com.example.proyectobackendswaplt.common.exception.ForbiddenException;
 import com.example.proyectobackendswaplt.common.exception.ResourceNotFoundException;
 import com.example.proyectobackendswaplt.item.dto.ItemFilter;
@@ -49,8 +50,15 @@ public class ItemService {
     }
 
     public Item markReserved(Item item) {
-        item.setState(ItemState.RESERVED);
-        return itemRepository.save(item);
+        return changeState(item, ItemState.RESERVED);
+    }
+
+    public Item markAvailable(Item item) {
+        return changeState(item, ItemState.AVAILABLE);
+    }
+
+    public Item markTraded(Item item) {
+        return changeState(item, ItemState.TRADED);
     }
 
     @Transactional
@@ -59,6 +67,14 @@ public class ItemService {
         if (!item.getUser().getEmail().equals(email)) {
             throw new ForbiddenException();
         }
+        if (item.getState() == ItemState.RESERVED) {
+            throw new ConflictException("No se puede eliminar un item reservado en un intercambio");
+        }
         itemRepository.delete(item);
+    }
+
+    private Item changeState(Item item, ItemState state) {
+        item.setState(state);
+        return itemRepository.save(item);
     }
 }

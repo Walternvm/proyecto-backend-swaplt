@@ -12,4 +12,5 @@ public interface ProposalRepository extends JpaRepository<Proposal, Long> {
     List<Proposal> findByStatusAndOfferedItem(ProposalStatus status, Item offeredItem);
     List<Proposal> findByStatusAndRequestedItem(ProposalStatus status, Item requestedItem);
     List<Proposal> findByUserOrRequestedItemUserOrderByCreatedAtDesc(User user, User requestedItemOwner);
+    boolean existsByOfferedItemIdAndPublicationIdAndStatus(Long offeredItemId, Long publicationId, ProposalStatus status);
 }

@@ -38,12 +38,17 @@ public class ProposalController {
 
     @PutMapping("/{id}/accept")
     public ResponseEntity<ExchangeResponse> accept(@PathVariable Long id) {
-        return ResponseEntity.ok(ExchangeResponse.from(proposalService.acceptProposal(id)));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ExchangeResponse.from(proposalService.acceptProposal(id)));
     }
 
     @PutMapping("/{id}/reject")
-    public ResponseEntity<Void> reject(@PathVariable Long id) {
-        proposalService.rejectProposal(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ProposalResponse> reject(@PathVariable Long id) {
+        return ResponseEntity.ok(ProposalResponse.from(proposalService.rejectProposal(id)));
+    }
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<ProposalResponse> cancel(@PathVariable Long id) {
+        return ResponseEntity.ok(ProposalResponse.from(proposalService.cancelProposal(id)));
     }
 }

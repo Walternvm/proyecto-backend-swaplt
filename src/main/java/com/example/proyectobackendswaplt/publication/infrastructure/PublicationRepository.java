@@ -12,4 +12,6 @@ import java.util.List;
 public interface PublicationRepository extends JpaRepository<Publication, Long> {
     List<Publication> findByStatusAndItemCategoryInAndUserNotOrderByCreatedAtDesc(
             PublicationStatus status, Collection<Category> categories, User user);
+    List<Publication> findByItemIdAndStatus(Long itemId, PublicationStatus status);
+    boolean existsByItemIdAndStatus(Long itemId, PublicationStatus status);
 }

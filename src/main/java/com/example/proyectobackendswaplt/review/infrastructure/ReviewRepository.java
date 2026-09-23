@@ -9,4 +9,5 @@ import java.util.List;
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByReceiverId(Long receiverId);
     List<Review> findByAuthorOrReceiver(User author, User receiver);
+    boolean existsByExchangeIdAndAuthorId(Long exchangeId, Long authorId);
 }

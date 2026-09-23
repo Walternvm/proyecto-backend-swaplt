@@ -8,6 +8,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
+
+import java.time.LocalDateTime;
 
 @Entity
 @NoArgsConstructor
@@ -39,4 +42,14 @@ public class Exchange {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ExchangeStatus status = ExchangeStatus.PENDING;
+
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean offeringUserConfirmed = false;
+
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean receivingUserConfirmed = false;
+
+    private LocalDateTime completedAt;
 }

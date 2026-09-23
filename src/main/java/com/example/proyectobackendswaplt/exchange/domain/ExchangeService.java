@@ -5,12 +5,16 @@ import com.example.proyectobackendswaplt.common.exception.ConflictException;
 import com.example.proyectobackendswaplt.common.exception.ForbiddenException;
 import com.example.proyectobackendswaplt.common.exception.ResourceNotFoundException;
 import com.example.proyectobackendswaplt.exchange.infrastructure.ExchangeRepository;
+import com.example.proyectobackendswaplt.item.domain.Item;
+import com.example.proyectobackendswaplt.item.domain.ItemService;
 import com.example.proyectobackendswaplt.proposal.domain.Proposal;
+import com.example.proyectobackendswaplt.publication.domain.PublicationService;
 import com.example.proyectobackendswaplt.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -18,6 +22,8 @@ import java.util.List;
 public class ExchangeService {
     private final ExchangeRepository exchangeRepository;
     private final CurrentUserService currentUserService;
+    private final ItemService itemService;
+    private final PublicationService publicationService;
 
     public List<Exchange> findAllVisible() {
         if (currentUserService.isAdmin()) {
@@ -50,25 +56,58 @@ public class ExchangeService {
     }
 
     @Transactional
-    public Exchange completeExchange(Long id) {
-        return changeStatus(id, ExchangeStatus.COMPLETED);
+    public Exchange confirmExchange(Long id) {
+        Exchange exchange = findPendingForParticipant(id);
+        if (exchange.getOfferingUser().getEmail().equals(currentUserService.email())) {
+            if (exchange.isOfferingUserConfirmed()) {
+                throw new ConflictException("Ya confirmaste este intercambio");
+            }
+            exchange.setOfferingUserConfirmed(true);
+        } else {
+            if (exchange.isReceivingUserConfirmed()) {
+                throw new ConflictException("Ya confirmaste este intercambio");
+            }
+            exchange.setReceivingUserConfirmed(true);
+        }
+        if (exchange.isOfferingUserConfirmed() && exchange.isReceivingUserConfirmed()) {
+            complete(exchange);
+        }
+        return exchangeRepository.save(exchange);
     }
 
     @Transactional
     public Exchange cancelExchange(Long id) {
-        return changeStatus(id, ExchangeStatus.CANCELLED);
+        Exchange exchange = findPendingForParticipant(id);
+        exchange.setStatus(ExchangeStatus.CANCELLED);
+        for (Item item : itemsOf(exchange)) {
+            itemService.markAvailable(item);
+        }
+        return exchangeRepository.save(exchange);
     }
 
-    private Exchange changeStatus(Long id, ExchangeStatus newStatus) {
+    private void complete(Exchange exchange) {
+        exchange.setStatus(ExchangeStatus.COMPLETED);
+        exchange.setCompletedAt(LocalDateTime.now());
+        for (Item item : itemsOf(exchange)) {
+            itemService.markTraded(item);
+            publicationService.closeActiveByItem(item);
+        }
+    }
+
+    private Exchange findPendingForParticipant(Long id) {
         Exchange exchange = findById(id);
         if (!isParticipant(exchange, currentUserService.email())) {
-            throw new ForbiddenException();
+            throw new ForbiddenException("Solo los participantes pueden modificar este intercambio");
         }
         if (exchange.getStatus() != ExchangeStatus.PENDING) {
-            throw new ConflictException("Intercambio no pendiente");
+            throw new ConflictException("El intercambio ya no esta pendiente");
         }
-        exchange.setStatus(newStatus);
-        return exchangeRepository.save(exchange);
+        return exchange;
+    }
+
+    private List<Item> itemsOf(Exchange exchange) {
+        Proposal proposal = exchange.getProposal();
+        return List.of(proposal.getOfferedItem(), proposal.getRequestedItem());
     }
 
     private boolean isParticipant(Exchange exchange, String email) {
