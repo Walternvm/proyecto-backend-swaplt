@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users/me")
+@RequestMapping("/users/me")
 @PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class MeController {

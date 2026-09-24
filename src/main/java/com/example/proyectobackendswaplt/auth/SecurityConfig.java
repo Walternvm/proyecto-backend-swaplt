@@ -1,5 +1,6 @@
 package com.example.proyectobackendswaplt.auth;
 
+import com.example.proyectobackendswaplt.common.config.ApiRoutes;
 import com.example.proyectobackendswaplt.user.domain.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,6 +23,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -81,12 +83,12 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/error").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/items/**", "/api/categories/**", "/api/publications/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/categories/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasRole("ADMIN")
-                        .requestMatchers("/api/users/me", "/api/users/me/**").authenticated()
-                        .requestMatchers("/api/users/**").hasRole("ADMIN")
+                        .requestMatchers(ApiRoutes.V1 + "/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, ApiRoutes.V1 + "/items/**", ApiRoutes.V1 + "/categories/**", ApiRoutes.V1 + "/publications/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, ApiRoutes.V1 + "/categories/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, ApiRoutes.V1 + "/categories/**").hasRole("ADMIN")
+                        .requestMatchers(ApiRoutes.V1 + "/users/me", ApiRoutes.V1 + "/users/me/**").authenticated()
+                        .requestMatchers(ApiRoutes.V1 + "/users/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
