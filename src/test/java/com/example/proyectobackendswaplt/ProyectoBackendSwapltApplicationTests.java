@@ -67,17 +67,17 @@ class ProyectoBackendSwapltApplicationTests {
 
     @Test
     void registerLoginAndProtectUsers() throws Exception {
-        mockMvc.perform(get("/api/users")).andExpect(status().isUnauthorized());
-        mockMvc.perform(post("/api/auth/register").contentType("application/json")
+        mockMvc.perform(get("/api/v1/users")).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/auth/register").contentType("application/json")
                         .content("{\"name\":\"Ana\",\"email\":\"ana@example.com\",\"password\":\"Password123\",\"role\":\"ADMIN\"}"))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.role").value("USER"));
-        String login = mockMvc.perform(post("/api/auth/login").contentType("application/json")
+        String login = mockMvc.perform(post("/api/v1/auth/login").contentType("application/json")
                         .content("{\"email\":\"ana@example.com\",\"password\":\"Password123\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.token").isNotEmpty())
                 .andReturn().getResponse().getContentAsString();
         String token = new com.fasterxml.jackson.databind.ObjectMapper()
                 .readTree(login).get("token").asText();
-        mockMvc.perform(get("/api/users").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/v1/users").header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
 
@@ -179,7 +179,7 @@ class ProyectoBackendSwapltApplicationTests {
 
         String itemBody = "{\"name\":\"Book\",\"categoryId\":" + category.getId()
                 + ",\"location\":\"Lima\",\"ownerId\":" + receiver.getId() + "}";
-        String offeredJson = mockMvc.perform(post("/api/items")
+        String offeredJson = mockMvc.perform(post("/api/v1/items")
                         .header("Authorization", "Bearer " + jwtService.createToken(offerer))
                         .contentType("application/json").content(itemBody))
                 .andExpect(status().isCreated())
@@ -189,13 +189,13 @@ class ProyectoBackendSwapltApplicationTests {
                 .andReturn().getResponse().getContentAsString();
         Long offeredItemId = new ObjectMapper().readTree(offeredJson).get("id").asLong();
 
-        String requestedJson = mockMvc.perform(post("/api/items")
+        String requestedJson = mockMvc.perform(post("/api/v1/items")
                         .header("Authorization", "Bearer " + jwtService.createToken(receiver))
                         .contentType("application/json").content(itemBody))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         Long requestedItemId = new ObjectMapper().readTree(requestedJson).get("id").asLong();
 
-        String publicationJson = mockMvc.perform(post("/api/publications")
+        String publicationJson = mockMvc.perform(post("/api/v1/publications")
                         .header("Authorization", "Bearer " + jwtService.createToken(receiver))
                         .contentType("application/json")
                         .content("{\"itemId\":" + requestedItemId + ",\"wantedItem\":\"Book\"}"))
@@ -205,7 +205,7 @@ class ProyectoBackendSwapltApplicationTests {
                 .andReturn().getResponse().getContentAsString();
         Long publicationId = new ObjectMapper().readTree(publicationJson).get("id").asLong();
 
-        mockMvc.perform(post("/api/proposals")
+        mockMvc.perform(post("/api/v1/proposals")
                         .header("Authorization", "Bearer " + jwtService.createToken(offerer))
                         .contentType("application/json")
                         .content("{\"offeredItemId\":" + offeredItemId + ",\"publicationId\":" + publicationId + "}"))
@@ -220,12 +220,12 @@ class ProyectoBackendSwapltApplicationTests {
         String oldRefresh = registerAndGetRefreshToken();
         String body = "{\"refreshToken\":\"" + oldRefresh + "\"}";
 
-        mockMvc.perform(post("/api/auth/refresh").contentType("application/json").content(body))
+        mockMvc.perform(post("/api/v1/auth/refresh").contentType("application/json").content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").isNotEmpty())
                 .andExpect(jsonPath("$.refreshToken").value(not(oldRefresh)));
 
-        mockMvc.perform(post("/api/auth/refresh").contentType("application/json").content(body))
+        mockMvc.perform(post("/api/v1/auth/refresh").contentType("application/json").content(body))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -234,10 +234,10 @@ class ProyectoBackendSwapltApplicationTests {
         String refresh = registerAndGetRefreshToken();
         String body = "{\"refreshToken\":\"" + refresh + "\"}";
 
-        mockMvc.perform(post("/api/auth/logout").contentType("application/json").content(body))
+        mockMvc.perform(post("/api/v1/auth/logout").contentType("application/json").content(body))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(post("/api/auth/refresh").contentType("application/json").content(body))
+        mockMvc.perform(post("/api/v1/auth/refresh").contentType("application/json").content(body))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -263,14 +263,14 @@ class ProyectoBackendSwapltApplicationTests {
         proposal.setPublication(publication);
         proposalRepository.save(proposal);
 
-        String url = "/api/proposals/" + proposal.getId();
+        String url = "/api/v1/proposals/" + proposal.getId();
         mockMvc.perform(get(url).header("Authorization", bearer(outsider))).andExpect(status().isForbidden());
         mockMvc.perform(get(url).header("Authorization", bearer(receiver))).andExpect(status().isOk());
         mockMvc.perform(get(url).header("Authorization", bearer(admin))).andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/proposals").header("Authorization", bearer(outsider)))
+        mockMvc.perform(get("/api/v1/proposals").header("Authorization", bearer(outsider)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
-        mockMvc.perform(get("/api/proposals").header("Authorization", bearer(offerer)))
+        mockMvc.perform(get("/api/v1/proposals").header("Authorization", bearer(offerer)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
     }
 
@@ -283,25 +283,25 @@ class ProyectoBackendSwapltApplicationTests {
         saveItem(owner, category, ItemCondition.FAIR, "Arequipa");
         String categoryId = String.valueOf(category.getId());
 
-        mockMvc.perform(get("/api/items").param("categoryId", categoryId))
+        mockMvc.perform(get("/api/v1/items").param("categoryId", categoryId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(2));
 
-        mockMvc.perform(get("/api/items").param("categoryId", categoryId).param("condition", "NEW"))
+        mockMvc.perform(get("/api/v1/items").param("categoryId", categoryId).param("condition", "NEW"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.content[0].condition").value("NEW"));
 
-        mockMvc.perform(get("/api/items").param("categoryId", categoryId).param("location", "lima"))
+        mockMvc.perform(get("/api/v1/items").param("categoryId", categoryId).param("location", "lima"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        mockMvc.perform(get("/api/items").param("categoryId", categoryId).param("size", "1"))
+        mockMvc.perform(get("/api/v1/items").param("categoryId", categoryId).param("size", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1))
                 .andExpect(jsonPath("$.totalPages").value(2));
 
-        mockMvc.perform(get("/api/items").param("state", "NOT_A_STATE"))
+        mockMvc.perform(get("/api/v1/items").param("state", "NOT_A_STATE"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -313,10 +313,10 @@ class ProyectoBackendSwapltApplicationTests {
         Category category = saveCategory("Fav-" + suffix);
         Publication publication = savePublication(owner, saveItem(owner, category));
 
-        String favoriteUrl = "/api/users/me/favorites/" + publication.getId();
+        String favoriteUrl = "/api/v1/users/me/favorites/" + publication.getId();
         mockMvc.perform(put(favoriteUrl).header("Authorization", bearer(fan))).andExpect(status().isNoContent());
         mockMvc.perform(put(favoriteUrl).header("Authorization", bearer(fan))).andExpect(status().isNoContent());
-        mockMvc.perform(get("/api/users/me/favorites").header("Authorization", bearer(fan)))
+        mockMvc.perform(get("/api/v1/users/me/favorites").header("Authorization", bearer(fan)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(publication.getId().intValue()));
@@ -324,19 +324,19 @@ class ProyectoBackendSwapltApplicationTests {
         mockMvc.perform(put(favoriteUrl).header("Authorization", bearer(owner))).andExpect(status().isConflict());
 
         mockMvc.perform(delete(favoriteUrl).header("Authorization", bearer(fan))).andExpect(status().isNoContent());
-        mockMvc.perform(get("/api/users/me/favorites").header("Authorization", bearer(fan)))
+        mockMvc.perform(get("/api/v1/users/me/favorites").header("Authorization", bearer(fan)))
                 .andExpect(jsonPath("$.length()").value(0));
 
-        mockMvc.perform(put("/api/users/me/interests/" + category.getId()).header("Authorization", bearer(fan)))
+        mockMvc.perform(put("/api/v1/users/me/interests/" + category.getId()).header("Authorization", bearer(fan)))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(get("/api/users/me/recommendations").header("Authorization", bearer(fan)))
+        mockMvc.perform(get("/api/v1/users/me/recommendations").header("Authorization", bearer(fan)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
 
-        mockMvc.perform(get("/api/users/me").header("Authorization", bearer(fan)))
+        mockMvc.perform(get("/api/v1/users/me").header("Authorization", bearer(fan)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value(fan.getEmail()));
-        mockMvc.perform(get("/api/users").header("Authorization", bearer(fan)))
+        mockMvc.perform(get("/api/v1/users").header("Authorization", bearer(fan)))
                 .andExpect(status().isForbidden());
     }
 
@@ -354,15 +354,15 @@ class ProyectoBackendSwapltApplicationTests {
         Long proposalId = idOf(postProposal(proposer, offered, publication).andExpect(status().isCreated()));
         postProposal(proposer, offered, publication).andExpect(status().isConflict());
 
-        String acceptUrl = "/api/proposals/" + proposalId + "/accept";
+        String acceptUrl = "/api/v1/proposals/" + proposalId + "/accept";
         mockMvc.perform(put(acceptUrl).header("Authorization", bearer(proposer))).andExpect(status().isForbidden());
         Long exchangeId = idOf(mockMvc.perform(put(acceptUrl).header("Authorization", bearer(owner)))
                 .andExpect(status().isCreated()));
 
-        mockMvc.perform(get("/api/items/" + offered.getId())).andExpect(jsonPath("$.state").value("RESERVED"));
+        mockMvc.perform(get("/api/v1/items/" + offered.getId())).andExpect(jsonPath("$.state").value("RESERVED"));
         postReview(proposer, exchangeId).andExpect(status().isConflict());
 
-        String completeUrl = "/api/exchanges/" + exchangeId + "/complete";
+        String completeUrl = "/api/v1/exchanges/" + exchangeId + "/complete";
         mockMvc.perform(put(completeUrl).header("Authorization", bearer(proposer)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PENDING"))
@@ -373,13 +373,13 @@ class ProyectoBackendSwapltApplicationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("COMPLETED"));
 
-        mockMvc.perform(get("/api/items/" + requested.getId())).andExpect(jsonPath("$.state").value("TRADED"));
-        mockMvc.perform(get("/api/publications/" + publication.getId())).andExpect(jsonPath("$.status").value("CLOSED"));
+        mockMvc.perform(get("/api/v1/items/" + requested.getId())).andExpect(jsonPath("$.state").value("TRADED"));
+        mockMvc.perform(get("/api/v1/publications/" + publication.getId())).andExpect(jsonPath("$.status").value("CLOSED"));
 
         postReview(outsider, exchangeId).andExpect(status().isForbidden());
         postReview(proposer, exchangeId).andExpect(status().isCreated());
         postReview(proposer, exchangeId).andExpect(status().isConflict());
-        mockMvc.perform(get("/api/reviews").param("userId", String.valueOf(owner.getId()))
+        mockMvc.perform(get("/api/v1/reviews").param("userId", String.valueOf(owner.getId()))
                         .header("Authorization", bearer(outsider)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
@@ -396,13 +396,13 @@ class ProyectoBackendSwapltApplicationTests {
         Item spare = saveItem(proposer, category);
         Publication publication = savePublication(owner, requested);
 
-        mockMvc.perform(post("/api/publications").header("Authorization", bearer(owner))
+        mockMvc.perform(post("/api/v1/publications").header("Authorization", bearer(owner))
                         .contentType("application/json")
                         .content("{\"itemId\":" + requested.getId() + ",\"wantedItem\":\"Otro\"}"))
                 .andExpect(status().isConflict());
 
         Long spareProposalId = idOf(postProposal(proposer, spare, publication).andExpect(status().isCreated()));
-        String withdrawUrl = "/api/proposals/" + spareProposalId + "/cancel";
+        String withdrawUrl = "/api/v1/proposals/" + spareProposalId + "/cancel";
         mockMvc.perform(put(withdrawUrl).header("Authorization", bearer(owner))).andExpect(status().isForbidden());
         mockMvc.perform(put(withdrawUrl).header("Authorization", bearer(proposer)))
                 .andExpect(status().isOk())
@@ -410,25 +410,25 @@ class ProyectoBackendSwapltApplicationTests {
         mockMvc.perform(put(withdrawUrl).header("Authorization", bearer(proposer))).andExpect(status().isConflict());
 
         Long proposalId = idOf(postProposal(proposer, offered, publication).andExpect(status().isCreated()));
-        Long exchangeId = idOf(mockMvc.perform(put("/api/proposals/" + proposalId + "/accept")
+        Long exchangeId = idOf(mockMvc.perform(put("/api/v1/proposals/" + proposalId + "/accept")
                 .header("Authorization", bearer(owner))).andExpect(status().isCreated()));
 
-        mockMvc.perform(delete("/api/items/" + offered.getId()).header("Authorization", bearer(proposer)))
+        mockMvc.perform(delete("/api/v1/items/" + offered.getId()).header("Authorization", bearer(proposer)))
                 .andExpect(status().isConflict());
 
-        mockMvc.perform(put("/api/exchanges/" + exchangeId + "/cancel").header("Authorization", bearer(proposer)))
+        mockMvc.perform(put("/api/v1/exchanges/" + exchangeId + "/cancel").header("Authorization", bearer(proposer)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
 
-        mockMvc.perform(get("/api/items/" + offered.getId())).andExpect(jsonPath("$.state").value("AVAILABLE"));
-        mockMvc.perform(get("/api/items/" + requested.getId())).andExpect(jsonPath("$.state").value("AVAILABLE"));
-        mockMvc.perform(put("/api/exchanges/" + exchangeId + "/complete").header("Authorization", bearer(owner)))
+        mockMvc.perform(get("/api/v1/items/" + offered.getId())).andExpect(jsonPath("$.state").value("AVAILABLE"));
+        mockMvc.perform(get("/api/v1/items/" + requested.getId())).andExpect(jsonPath("$.state").value("AVAILABLE"));
+        mockMvc.perform(put("/api/v1/exchanges/" + exchangeId + "/complete").header("Authorization", bearer(owner)))
                 .andExpect(status().isConflict());
     }
 
     private String registerAndGetRefreshToken() throws Exception {
         String email = "refresh-" + UUID.randomUUID() + "@example.com";
-        String json = mockMvc.perform(post("/api/auth/register").contentType("application/json")
+        String json = mockMvc.perform(post("/api/v1/auth/register").contentType("application/json")
                         .content("{\"name\":\"Rita\",\"email\":\"" + email + "\",\"password\":\"Password123\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.refreshToken").isNotEmpty())
@@ -437,13 +437,13 @@ class ProyectoBackendSwapltApplicationTests {
     }
 
     private ResultActions postProposal(User proposer, Item offered, Publication publication) throws Exception {
-        return mockMvc.perform(post("/api/proposals").header("Authorization", bearer(proposer))
+        return mockMvc.perform(post("/api/v1/proposals").header("Authorization", bearer(proposer))
                 .contentType("application/json")
                 .content("{\"offeredItemId\":" + offered.getId() + ",\"publicationId\":" + publication.getId() + "}"));
     }
 
     private ResultActions postReview(User author, Long exchangeId) throws Exception {
-        return mockMvc.perform(post("/api/reviews").header("Authorization", bearer(author))
+        return mockMvc.perform(post("/api/v1/reviews").header("Authorization", bearer(author))
                 .contentType("application/json")
                 .content("{\"exchangeId\":" + exchangeId + ",\"rating\":5,\"comment\":\"Todo bien\"}"));
     }
