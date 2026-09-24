@@ -16,6 +16,8 @@ import com.example.proyectobackendswaplt.publication.domain.PublicationService;
 import com.example.proyectobackendswaplt.publication.domain.PublicationStatus;
 import com.example.proyectobackendswaplt.user.domain.User;
 import com.example.proyectobackendswaplt.user.domain.UserService;
+import com.example.proyectobackendswaplt.proposal.event.ProposalAcceptedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +35,7 @@ public class ProposalService {
     private final UserService userService;
     private final ExchangeService exchangeService;
     private final CurrentUserService currentUserService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Proposal create(ProposalRequest request, String email) {
@@ -94,6 +97,7 @@ public class ProposalService {
         proposalRepository.save(proposal);
 
         Exchange exchange = exchangeService.createFromProposal(proposal);
+        eventPublisher.publishEvent(new ProposalAcceptedEvent(proposal, exchange));
         invalidateOtherPendingProposals(proposal, offeredItem, requestedItem);
         return exchange;
     }

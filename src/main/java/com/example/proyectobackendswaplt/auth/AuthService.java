@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.proyectobackendswaplt.auth.event.UserRegisteredEvent;
+import org.springframework.context.ApplicationEventPublisher;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +23,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -28,6 +31,7 @@ public class AuthService {
             throw new ConflictException("Email ya registrado");
         }
         User user = createUser(request.name(), request.email(), request.password(), Role.USER);
+        eventPublisher.publishEvent(new UserRegisteredEvent(user));
         return toResponse(user);
     }
 

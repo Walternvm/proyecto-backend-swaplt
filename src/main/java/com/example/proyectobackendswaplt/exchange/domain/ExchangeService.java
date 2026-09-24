@@ -10,6 +10,8 @@ import com.example.proyectobackendswaplt.item.domain.ItemService;
 import com.example.proyectobackendswaplt.proposal.domain.Proposal;
 import com.example.proyectobackendswaplt.publication.domain.PublicationService;
 import com.example.proyectobackendswaplt.user.domain.User;
+import com.example.proyectobackendswaplt.exchange.event.ExchangeCompletedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,7 @@ public class ExchangeService {
     private final CurrentUserService currentUserService;
     private final ItemService itemService;
     private final PublicationService publicationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public List<Exchange> findAllVisible() {
         if (currentUserService.isAdmin()) {
@@ -92,6 +95,7 @@ public class ExchangeService {
             itemService.markTraded(item);
             publicationService.closeActiveByItem(item);
         }
+        eventPublisher.publishEvent(new ExchangeCompletedEvent(exchange));
     }
 
     private Exchange findPendingForParticipant(Long id) {
