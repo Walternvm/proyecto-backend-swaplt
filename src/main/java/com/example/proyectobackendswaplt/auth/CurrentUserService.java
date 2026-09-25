@@ -1,5 +1,6 @@
 package com.example.proyectobackendswaplt.auth;
 
+import com.example.proyectobackendswaplt.common.exception.ForbiddenException;
 import com.example.proyectobackendswaplt.user.domain.User;
 import com.example.proyectobackendswaplt.user.domain.UserService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,9 @@ public class CurrentUserService {
     private final UserService userService;
 
     public String email() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
+        Authentication authentication = getAuthentication();
+
+        return authentication.getName();
     }
 
     public User get() {
@@ -22,7 +25,21 @@ public class CurrentUserService {
 
     public boolean isAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+            return false;
+        }
+
+        return authentication.getAuthorities().stream().anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+    }
+
+    private Authentication getAuthentication() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+            throw new ForbiddenException("Debes iniciar sesion");
+        }
+
+        return authentication;
     }
 }

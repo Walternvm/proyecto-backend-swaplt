@@ -1,7 +1,8 @@
 package com.example.proyectobackendswaplt.exchange.application;
 
 import com.example.proyectobackendswaplt.exchange.domain.ExchangeService;
-import com.example.proyectobackendswaplt.exchange.dto.ExchangeResponse;
+import com.example.proyectobackendswaplt.exchange.dto.ExchangeMapper;
+import com.example.proyectobackendswaplt.exchange.dto.ExchangeResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,24 +14,29 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ExchangeController {
     private final ExchangeService exchangeService;
+    private final ExchangeMapper exchangeMapper;
 
     @GetMapping
-    public ResponseEntity<List<ExchangeResponse>> findAll() {
-        return ResponseEntity.ok(exchangeService.findAllVisible().stream().map(ExchangeResponse::from).toList());
+    public ResponseEntity<List<ExchangeResponseDto>> findAll() {
+        List<ExchangeResponseDto> response = exchangeService.findAllVisible().stream().map(exchangeMapper::toResponseDto).toList();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ExchangeResponse> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(ExchangeResponse.from(exchangeService.findVisibleById(id)));
+    public ResponseEntity<ExchangeResponseDto> findById(@PathVariable Long id) {
+        ExchangeResponseDto response = exchangeMapper.toResponseDto(exchangeService.findVisibleById(id));
+        return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{id}/complete")
-    public ResponseEntity<ExchangeResponse> complete(@PathVariable Long id) {
-        return ResponseEntity.ok(ExchangeResponse.from(exchangeService.confirmExchange(id)));
+    @PatchMapping("/{id}/confirm")
+    public ResponseEntity<ExchangeResponseDto> confirm(@PathVariable Long id) {
+        ExchangeResponseDto response = exchangeMapper.toResponseDto(exchangeService.confirmExchange(id));
+        return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{id}/cancel")
-    public ResponseEntity<ExchangeResponse> cancel(@PathVariable Long id) {
-        return ResponseEntity.ok(ExchangeResponse.from(exchangeService.cancelExchange(id)));
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<ExchangeResponseDto> cancel(@PathVariable Long id) {
+        ExchangeResponseDto response = exchangeMapper.toResponseDto(exchangeService.cancelExchange(id));
+        return ResponseEntity.ok(response);
     }
 }

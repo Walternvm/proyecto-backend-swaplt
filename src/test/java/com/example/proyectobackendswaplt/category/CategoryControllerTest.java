@@ -10,13 +10,18 @@ class CategoryControllerTest extends IntegrationTestSupport {
 
     @Test
     void publicCanListAndGetById() throws Exception {
-        var category = saveCategory("Publica-" + uniqueSuffix());
-        mockMvc.perform(get(BASE + "/categories")).andExpect(status().isOk());
-        mockMvc.perform(get(BASE + "/categories/" + category.getId())).andExpect(status().isOk());
+        var category = saveCategory("Public-" + uniqueSuffix());
+
+        mockMvc.perform(get(BASE + "/categories"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(BASE + "/categories/" + category.getId()))
+                .andExpect(status().isOk());
     }
 
     @Test
     void getByIdNotFoundReturns404() throws Exception {
-        mockMvc.perform(get(BASE + "/categories/999999")).andExpect(status().isNotFound());
+        mockMvc.perform(get(BASE + "/categories/999999"))
+                .andExpect(status().isNotFound());
     }
 }

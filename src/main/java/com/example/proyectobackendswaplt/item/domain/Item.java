@@ -1,20 +1,22 @@
 package com.example.proyectobackendswaplt.item.domain;
 
 import com.example.proyectobackendswaplt.category.domain.Category;
+import com.example.proyectobackendswaplt.proposal.domain.Proposal;
 import com.example.proyectobackendswaplt.user.domain.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
-import com.example.proyectobackendswaplt.publication.domain.Publication;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import java.util.ArrayList;
-import java.util.List;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @NoArgsConstructor
@@ -49,11 +51,12 @@ public class Item {
 
     @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private ItemState state = ItemState.AVAILABLE;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(name = "item_condition", length = 20)
+    @Column(name = "item_condition", nullable = false, length = 20)
     private ItemCondition condition;
 
     @NotBlank
@@ -61,7 +64,16 @@ public class Item {
     @Column(nullable = false, length = 120)
     private String location;
 
+    @NotBlank
+    @Size(max = 120)
+    @Column(name = "wanted_item", nullable = false, length = 120)
+    private String wantedItem;
+
+    @NotNull
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
     @JsonIgnore
-    @OneToMany(mappedBy = "item")
-    private List<Publication> publications = new ArrayList<>();
+    @OneToMany(mappedBy = "requestedItem")
+    private List<Proposal> receivedProposals = new ArrayList<>();
 }

@@ -20,13 +20,20 @@ public class MailService {
     public void send(String to, String subject, String body) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
+
             message.setFrom(from);
             message.setTo(to);
             message.setSubject(subject);
             message.setText(body);
+
             mailSender.send(message);
-        } catch (MailException e) {
-            log.error("No se pudo enviar el correo a {}: {}", to, e.getMessage());
+
+        } catch (MailException exception) {
+            log.error(
+                    "No se pudo enviar el correo a {}",
+                    to,
+                    exception
+            );
         }
     }
 }

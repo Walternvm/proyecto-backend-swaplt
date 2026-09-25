@@ -7,11 +7,13 @@ import com.example.proyectobackendswaplt.common.exception.ResourceNotFoundExcept
 import com.example.proyectobackendswaplt.exchange.domain.Exchange;
 import com.example.proyectobackendswaplt.exchange.domain.ExchangeService;
 import com.example.proyectobackendswaplt.exchange.domain.ExchangeStatus;
-import com.example.proyectobackendswaplt.review.dto.ReviewRequest;
+import com.example.proyectobackendswaplt.review.dto.ReviewMapper;
+import com.example.proyectobackendswaplt.review.dto.ReviewRequestDto;
 import com.example.proyectobackendswaplt.review.infrastructure.ReviewRepository;
 import com.example.proyectobackendswaplt.user.domain.User;
 import com.example.proyectobackendswaplt.user.domain.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,51 +26,71 @@ public class ReviewService {
     private final ExchangeService exchangeService;
     private final UserService userService;
     private final CurrentUserService currentUserService;
+    private final ReviewMapper reviewMapper;
 
     @Transactional
-    public Review create(ReviewRequest request, String email) {
-        Exchange exchange = exchangeService.findById(request.exchangeId());
-        Review review = new Review();
-        assignParticipants(review, exchange, email);
+    public Review create(ReviewRequestDto request) {
+        Exchange exchange = exchangeService.findById(
+                request.getExchangeId()
+        );
+
+        User currentUser = currentUserService.get();
+        Review review = reviewMapper.toEntity(request);
+
+        assignParticipants(review, exchange, currentUser);
 
         if (exchange.getStatus() != ExchangeStatus.COMPLETED) {
             throw new ConflictException("Solo puedes calificar intercambios completados");
         }
-        if (reviewRepository.existsByExchangeIdAndAuthorId(exchange.getId(), review.getAuthor().getId())) {
+
+        boolean alreadyReviewed = reviewRepository.existsByExchangeIdAndAuthorId(exchange.getId(), currentUser.getId());
+
+        if (alreadyReviewed) {
             throw new ConflictException("Ya calificaste este intercambio");
         }
 
         review.setExchange(exchange);
-        review.setRating(request.rating());
-        review.setComment(request.comment());
-        return reviewRepository.save(review);
+
+        try {
+            return reviewRepository.saveAndFlush(review);
+        } catch (DataIntegrityViolationException exception) {
+            throw new ConflictException("Ya calificaste este intercambio");
+        }
     }
 
-    public List<Review> findAll(Long userId) {
-        if (userId != null) {
-            userService.findById(userId);
-            return reviewRepository.findByReceiverId(userId);
-        }
+    @Transactional(readOnly = true)
+    public List<Review> findAllVisible() {
         if (currentUserService.isAdmin()) {
             return reviewRepository.findAll();
         }
-        User current = currentUserService.get();
-        return reviewRepository.findByAuthorOrReceiver(current, current);
+
+        User currentUser = currentUserService.get();
+
+        return reviewRepository.findByAuthorOrReceiver(currentUser, currentUser);
     }
 
+    @Transactional(readOnly = true)
+    public List<Review> findReceivedByUserId(Long userId) {
+        userService.findById(userId);
+
+        return reviewRepository.findByReceiverId(userId);
+    }
+
+    @Transactional(readOnly = true)
     public Review findById(Long id) {
-        return reviewRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Review", id));
+        return reviewRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Review", id));
     }
 
-    private void assignParticipants(Review review, Exchange exchange, String email) {
-        if (exchange.getOfferingUser().getEmail().equals(email)) {
+    private void assignParticipants(Review review, Exchange exchange, User currentUser) {
+        if (exchange.getOfferingUser().getId().equals(currentUser.getId())) {
             review.setAuthor(exchange.getOfferingUser());
             review.setReceiver(exchange.getReceivingUser());
-        } else if (exchange.getReceivingUser().getEmail().equals(email)) {
+        }
+        else if (exchange.getReceivingUser().getId().equals(currentUser.getId())) {
             review.setAuthor(exchange.getReceivingUser());
             review.setReceiver(exchange.getOfferingUser());
-        } else {
+        }
+        else {
             throw new ForbiddenException("Solo los participantes del intercambio pueden calificarlo");
         }
     }

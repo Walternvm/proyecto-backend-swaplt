@@ -2,15 +2,15 @@ package com.example.proyectobackendswaplt.proposal.domain;
 
 import com.example.proyectobackendswaplt.item.domain.Item;
 import com.example.proyectobackendswaplt.user.domain.User;
-import com.example.proyectobackendswaplt.publication.domain.Publication;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.time.LocalDateTime;
 
 @Entity
 @NoArgsConstructor
@@ -38,17 +38,13 @@ public class Proposal {
     @JoinColumn(name = "requested_item_id", nullable = false)
     private Item requestedItem;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "publication_id")
-    private Publication publication;
-
     @NotNull
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private ProposalStatus status = ProposalStatus.PENDING;
 
     @Size(max = 1000)

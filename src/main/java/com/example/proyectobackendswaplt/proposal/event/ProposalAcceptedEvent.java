@@ -1,7 +1,18 @@
 package com.example.proyectobackendswaplt.proposal.event;
 
-import com.example.proyectobackendswaplt.exchange.domain.Exchange;
-import com.example.proyectobackendswaplt.proposal.domain.Proposal;
+import lombok.Getter;
+import org.springframework.context.ApplicationEvent;
 
-public record ProposalAcceptedEvent(Proposal proposal, Exchange exchange) {
+@Getter
+public class ProposalAcceptedEvent extends ApplicationEvent {
+    private final String offeringUserEmail;
+    private final String receivingUserEmail;
+    private final Long exchangeId;
+
+    public ProposalAcceptedEvent(Object source, String offeringUserEmail, String receivingUserEmail, Long exchangeId) {
+        super(source);
+        this.offeringUserEmail = offeringUserEmail;
+        this.receivingUserEmail = receivingUserEmail;
+        this.exchangeId = exchangeId;
+    }
 }

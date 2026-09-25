@@ -1,10 +1,10 @@
 package com.example.proyectobackendswaplt.user.application;
 
 import com.example.proyectobackendswaplt.user.domain.UserService;
-import com.example.proyectobackendswaplt.user.dto.UserResponse;
+import com.example.proyectobackendswaplt.user.dto.UserMapper;
+import com.example.proyectobackendswaplt.user.dto.UserResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,21 +14,21 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
+    private final UserMapper userMapper;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<UserResponse>> findAll() {
-        return ResponseEntity.ok(userService.findAll().stream().map(UserResponse::from).toList());
+    public ResponseEntity<List<UserResponseDto>> findAll() {
+        List<UserResponseDto> response = userService.findAll().stream().map(userMapper::toResponseDto).toList();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(UserResponse.from(userService.findById(id)));
+    public ResponseEntity<UserResponseDto> findById(@PathVariable Long id) {
+        UserResponseDto response = userMapper.toResponseDto(userService.findById(id));
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         userService.delete(id);
         return ResponseEntity.noContent().build();

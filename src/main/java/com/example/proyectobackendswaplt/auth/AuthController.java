@@ -1,9 +1,9 @@
 package com.example.proyectobackendswaplt.auth;
 
-import com.example.proyectobackendswaplt.auth.dto.AuthResponse;
-import com.example.proyectobackendswaplt.auth.dto.LoginRequest;
-import com.example.proyectobackendswaplt.auth.dto.RefreshTokenRequest;
-import com.example.proyectobackendswaplt.auth.dto.RegisterRequest;
+import com.example.proyectobackendswaplt.auth.dto.AuthResponseDto;
+import com.example.proyectobackendswaplt.auth.dto.LoginRequestDto;
+import com.example.proyectobackendswaplt.auth.dto.RefreshTokenRequestDto;
+import com.example.proyectobackendswaplt.auth.dto.RegisterRequestDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,22 +17,22 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthResponseDto> register(@Valid @RequestBody RegisterRequestDto request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<AuthResponseDto> refresh(@Valid @RequestBody RefreshTokenRequestDto request) {
         return ResponseEntity.ok(authService.refresh(request));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequestDto request) {
         authService.logout(request);
         return ResponseEntity.noContent().build();
     }

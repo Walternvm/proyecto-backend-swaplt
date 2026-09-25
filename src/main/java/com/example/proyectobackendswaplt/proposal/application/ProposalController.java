@@ -1,14 +1,15 @@
 package com.example.proyectobackendswaplt.proposal.application;
 
-import com.example.proyectobackendswaplt.exchange.dto.ExchangeResponse;
+import com.example.proyectobackendswaplt.exchange.dto.ExchangeMapper;
+import com.example.proyectobackendswaplt.exchange.dto.ExchangeResponseDto;
 import com.example.proyectobackendswaplt.proposal.domain.ProposalService;
-import com.example.proyectobackendswaplt.proposal.dto.ProposalRequest;
-import com.example.proyectobackendswaplt.proposal.dto.ProposalResponse;
+import com.example.proyectobackendswaplt.proposal.dto.ProposalMapper;
+import com.example.proyectobackendswaplt.proposal.dto.ProposalRequestDto;
+import com.example.proyectobackendswaplt.proposal.dto.ProposalResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,37 +19,49 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProposalController {
     private final ProposalService proposalService;
+    private final ProposalMapper proposalMapper;
+    private final ExchangeMapper exchangeMapper;
 
     @PostMapping
-    public ResponseEntity<ProposalResponse> create(@Valid @RequestBody ProposalRequest request,
-                                                   Authentication authentication) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ProposalResponse.from(proposalService.create(request, authentication.getName())));
+    public ResponseEntity<ProposalResponseDto> create(@Valid @RequestBody ProposalRequestDto request) {
+        ProposalResponseDto response = proposalMapper.toResponseDto(proposalService.create(request));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<ProposalResponse>> findAll() {
-        return ResponseEntity.ok(proposalService.findAllVisible().stream().map(ProposalResponse::from).toList());
+    public ResponseEntity<List<ProposalResponseDto>> findAll() {
+
+        List<ProposalResponseDto> response = proposalService.findAllVisible().stream().map(proposalMapper::toResponseDto).toList();
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProposalResponse> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(ProposalResponse.from(proposalService.findVisibleById(id)));
+    public ResponseEntity<ProposalResponseDto> findById(@PathVariable Long id) {
+        ProposalResponseDto response = proposalMapper.toResponseDto(proposalService.findVisibleById(id));
+
+        return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{id}/accept")
-    public ResponseEntity<ExchangeResponse> accept(@PathVariable Long id) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ExchangeResponse.from(proposalService.acceptProposal(id)));
+    @PatchMapping("/{id}/accept")
+    public ResponseEntity<ExchangeResponseDto> accept(@PathVariable Long id) {
+        ExchangeResponseDto response = exchangeMapper.toResponseDto(proposalService.acceptProposal(id));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PutMapping("/{id}/reject")
-    public ResponseEntity<ProposalResponse> reject(@PathVariable Long id) {
-        return ResponseEntity.ok(ProposalResponse.from(proposalService.rejectProposal(id)));
+    @PatchMapping("/{id}/reject")
+    public ResponseEntity<ProposalResponseDto> reject(@PathVariable Long id) {
+        ProposalResponseDto response = proposalMapper.toResponseDto(proposalService.rejectProposal(id));
+
+        return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{id}/cancel")
-    public ResponseEntity<ProposalResponse> cancel(@PathVariable Long id) {
-        return ResponseEntity.ok(ProposalResponse.from(proposalService.cancelProposal(id)));
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<ProposalResponseDto> cancel(@PathVariable Long id) {
+        ProposalResponseDto response = proposalMapper.toResponseDto(proposalService.cancelProposal(id));
+
+        return ResponseEntity.ok(response);
     }
 }

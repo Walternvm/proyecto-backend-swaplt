@@ -5,9 +5,9 @@ import com.example.proyectobackendswaplt.exchange.event.ExchangeCompletedEvent;
 import com.example.proyectobackendswaplt.proposal.event.ProposalAcceptedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
@@ -17,28 +17,56 @@ public class NotificationEventListener {
     @Async("mailTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onUserRegistered(UserRegisteredEvent event) {
-        mailService.send(event.user().getEmail(), "Bienvenido a Swaplt",
-                "Hola " + event.user().getName() + ", tu cuenta fue creada exitosamente.");
+        mailService.send(
+                event.getUserEmail(),
+                "Bienvenido a Swaplt",
+                "Hola "
+                        + event.getUserName()
+                        + ", tu cuenta fue creada exitosamente."
+        );
     }
 
     @Async("mailTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onProposalAccepted(ProposalAcceptedEvent event) {
-        String offererEmail = event.proposal().getUser().getEmail();
-        String ownerEmail = event.proposal().getRequestedItem().getUser().getEmail();
-        mailService.send(offererEmail, "Tu propuesta fue aceptada",
-                "Tu propuesta de intercambio fue aceptada. Se generó el intercambio #" + event.exchange().getId() + ".");
-        mailService.send(ownerEmail, "Aceptaste una propuesta",
-                "Aceptaste una propuesta de intercambio. Se generó el intercambio #" + event.exchange().getId() + ".");
+        String body =
+                "Se genero el intercambio #"
+                        + event.getExchangeId()
+                        + ".";
+
+        mailService.send(
+                event.getOfferingUserEmail(),
+                "Tu propuesta fue aceptada",
+                "Tu propuesta de intercambio fue aceptada. "
+                        + body
+        );
+
+        mailService.send(
+                event.getReceivingUserEmail(),
+                "Aceptaste una propuesta",
+                "Aceptaste una propuesta de intercambio. "
+                        + body
+        );
     }
 
     @Async("mailTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onExchangeCompleted(ExchangeCompletedEvent event) {
-        String offeringEmail = event.exchange().getOfferingUser().getEmail();
-        String receivingEmail = event.exchange().getReceivingUser().getEmail();
-        String body = "El intercambio #" + event.exchange().getId() + " se completó exitosamente.";
-        mailService.send(offeringEmail, "Intercambio completado", body);
-        mailService.send(receivingEmail, "Intercambio completado", body);
+        String body =
+                "El intercambio #"
+                        + event.getExchangeId()
+                        + " se completo exitosamente.";
+
+        mailService.send(
+                event.getOfferingUserEmail(),
+                "Intercambio completado",
+                body
+        );
+
+        mailService.send(
+                event.getReceivingUserEmail(),
+                "Intercambio completado",
+                body
+        );
     }
 }

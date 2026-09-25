@@ -9,17 +9,15 @@ import com.example.proyectobackendswaplt.exchange.domain.ExchangeService;
 import com.example.proyectobackendswaplt.item.domain.Item;
 import com.example.proyectobackendswaplt.item.domain.ItemService;
 import com.example.proyectobackendswaplt.item.domain.ItemState;
-import com.example.proyectobackendswaplt.proposal.dto.ProposalRequest;
-import com.example.proyectobackendswaplt.proposal.infrastructure.ProposalRepository;
-import com.example.proyectobackendswaplt.publication.domain.Publication;
-import com.example.proyectobackendswaplt.publication.domain.PublicationService;
-import com.example.proyectobackendswaplt.publication.domain.PublicationStatus;
-import com.example.proyectobackendswaplt.user.domain.User;
-import com.example.proyectobackendswaplt.user.domain.UserService;
+import com.example.proyectobackendswaplt.proposal.dto.ProposalMapper;
+import com.example.proyectobackendswaplt.proposal.dto.ProposalRequestDto;
 import com.example.proyectobackendswaplt.proposal.event.ProposalAcceptedEvent;
-import org.springframework.context.ApplicationEventPublisher;
+import com.example.proyectobackendswaplt.proposal.infrastructure.ProposalRepository;
+import com.example.proyectobackendswaplt.user.domain.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
@@ -31,119 +29,157 @@ import java.util.Set;
 public class ProposalService {
     private final ProposalRepository proposalRepository;
     private final ItemService itemService;
-    private final PublicationService publicationService;
-    private final UserService userService;
     private final ExchangeService exchangeService;
     private final CurrentUserService currentUserService;
     private final ApplicationEventPublisher eventPublisher;
+    private final ProposalMapper proposalMapper;
 
     @Transactional
-    public Proposal create(ProposalRequest request, String email) {
-        Item offered = itemService.findById(request.offeredItemId());
-        Publication publication = publicationService.findById(request.publicationId());
-        Item requested = publication.getItem();
-        if (!offered.getUser().getEmail().equals(email)) {
+    public Proposal create(ProposalRequestDto request) {
+        User currentUser = currentUserService.get();
+
+        Item offeredItem = itemService.findById(request.getOfferedItemId());
+
+        Item requestedItem = itemService.findById(request.getRequestedItemId());
+
+        if (!offeredItem.getUser().getId().equals(currentUser.getId())) {
             throw new ForbiddenException("Solo puedes ofrecer tus propios items");
         }
-        validateCanPropose(offered, requested, publication, email);
 
-        Proposal proposal = new Proposal();
-        proposal.setUser(userService.getByEmail(email));
-        proposal.setOfferedItem(offered);
-        proposal.setRequestedItem(requested);
-        proposal.setPublication(publication);
-        proposal.setMessage(request.message());
+        validateCanPropose(offeredItem, requestedItem, currentUser);
+
+        Proposal proposal = proposalMapper.toEntity(request);
+        proposal.setUser(currentUser);
+        proposal.setOfferedItem(offeredItem);
+        proposal.setRequestedItem(requestedItem);
         proposal.setStatus(ProposalStatus.PENDING);
+
         return proposalRepository.save(proposal);
     }
 
+    @Transactional(readOnly = true)
     public List<Proposal> findAllVisible() {
         if (currentUserService.isAdmin()) {
             return proposalRepository.findAll();
         }
-        User current = currentUserService.get();
-        return proposalRepository.findByUserOrRequestedItemUserOrderByCreatedAtDesc(current, current);
+
+        User currentUser = currentUserService.get();
+
+        return proposalRepository.findByUserOrRequestedItemUserOrderByCreatedAtDesc(currentUser, currentUser);
     }
 
+    @Transactional(readOnly = true)
     public Proposal findVisibleById(Long id) {
         Proposal proposal = findById(id);
+
         if (!currentUserService.isAdmin() && !isParticipant(proposal, currentUserService.email())) {
             throw new ForbiddenException();
         }
+
         return proposal;
     }
 
+    @Transactional(readOnly = true)
     public Proposal findById(Long id) {
-        return proposalRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Propuesta", id));
+        return proposalRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Propuesta", id));
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public Exchange acceptProposal(Long proposalId) {
         Proposal proposal = findById(proposalId);
-        requirePublicationOwner(proposal);
+
+        requireRequestedItemOwner(proposal);
         requirePending(proposal);
 
         Item offeredItem = proposal.getOfferedItem();
         Item requestedItem = proposal.getRequestedItem();
-        if (offeredItem.getState() != ItemState.AVAILABLE
-                || requestedItem.getState() != ItemState.AVAILABLE) {
+
+        if (offeredItem.getState() != ItemState.AVAILABLE || requestedItem.getState() != ItemState.AVAILABLE) {
             throw new ConflictException("Uno o ambos items ya no estan disponibles");
         }
 
         itemService.markReserved(offeredItem);
         itemService.markReserved(requestedItem);
+
         proposal.setStatus(ProposalStatus.ACCEPTED);
         proposalRepository.save(proposal);
 
         Exchange exchange = exchangeService.createFromProposal(proposal);
-        eventPublisher.publishEvent(new ProposalAcceptedEvent(proposal, exchange));
+
         invalidateOtherPendingProposals(proposal, offeredItem, requestedItem);
+
+        eventPublisher.publishEvent(
+                new ProposalAcceptedEvent(
+                        this,
+                        proposal.getUser()
+                                .getEmail(),
+                        proposal.getRequestedItem()
+                                .getUser()
+                                .getEmail(),
+                        exchange.getId()
+                )
+        );
+
         return exchange;
     }
 
     @Transactional
     public Proposal rejectProposal(Long proposalId) {
         Proposal proposal = findById(proposalId);
-        requirePublicationOwner(proposal);
+
+        requireRequestedItemOwner(proposal);
         requirePending(proposal);
+
         proposal.setStatus(ProposalStatus.REJECTED);
+
         return proposalRepository.save(proposal);
     }
 
     @Transactional
     public Proposal cancelProposal(Long proposalId) {
         Proposal proposal = findById(proposalId);
-        if (!proposal.getUser().getEmail().equals(currentUserService.email())) {
+
+        if (!proposal.getUser().getId().equals(currentUserService.get().getId())) {
             throw new ForbiddenException("Solo quien envio la propuesta puede retirarla");
         }
+
         requirePending(proposal);
         proposal.setStatus(ProposalStatus.CANCELLED);
+
         return proposalRepository.save(proposal);
     }
 
-    private void validateCanPropose(Item offered, Item requested, Publication publication, String email) {
-        if (requested.getUser().getEmail().equals(email)) {
-            throw new ConflictException("No puedes proponer un intercambio a tu propia publicacion");
+    private void validateCanPropose(Item offeredItem, Item requestedItem, User currentUser) {
+        if (offeredItem.getId().equals(requestedItem.getId())) {
+            throw new ConflictException("No puedes intercambiar un item por si mismo");
         }
-        if (publication.getStatus() != PublicationStatus.ACTIVE) {
-            throw new ConflictException("La publicacion no esta activa");
+
+        if (requestedItem.getUser().getId().equals(currentUser.getId())) {
+            throw new ConflictException("No puedes proponer un intercambio contigo mismo");
         }
-        if (offered.getState() != ItemState.AVAILABLE) {
+
+        if (offeredItem.getState() != ItemState.AVAILABLE) {
             throw new ConflictException("Tu item no esta disponible");
         }
-        if (requested.getState() != ItemState.AVAILABLE) {
-            throw new ConflictException("El item publicado no esta disponible");
+
+        if (requestedItem.getState() != ItemState.AVAILABLE) {
+            throw new ConflictException("El item solicitado no esta disponible");
         }
-        if (proposalRepository.existsByOfferedItemIdAndPublicationIdAndStatus(
-                offered.getId(), publication.getId(), ProposalStatus.PENDING)) {
+
+        boolean duplicateProposal = proposalRepository.existsByOfferedItemAndRequestedItemAndStatus(offeredItem, requestedItem, ProposalStatus.PENDING);
+
+        if (duplicateProposal) {
             throw new ConflictException("Ya enviaste una propuesta pendiente con este item");
         }
     }
 
-    private void requirePublicationOwner(Proposal proposal) {
-        if (!proposal.getRequestedItem().getUser().getEmail().equals(currentUserService.email())) {
-            throw new ForbiddenException("Solo el dueno de la publicacion puede responder la propuesta");
+    private void requireRequestedItemOwner(Proposal proposal) {
+        Long ownerId = proposal.getRequestedItem().getUser().getId();
+
+        Long currentUserId = currentUserService.get().getId();
+
+        if (!ownerId.equals(currentUserId)) {
+            throw new ForbiddenException("Solo el propietario del item solicitado puede responder la propuesta");
         }
     }
 
@@ -153,22 +189,31 @@ public class ProposalService {
         }
     }
 
-    private void invalidateOtherPendingProposals(Proposal accepted, Item offeredItem, Item requestedItem) {
-        Set<Proposal> toInvalidate = new HashSet<>();
-        toInvalidate.addAll(proposalRepository.findByStatusAndOfferedItem(ProposalStatus.PENDING, offeredItem));
-        toInvalidate.addAll(proposalRepository.findByStatusAndRequestedItem(ProposalStatus.PENDING, offeredItem));
-        toInvalidate.addAll(proposalRepository.findByStatusAndOfferedItem(ProposalStatus.PENDING, requestedItem));
-        toInvalidate.addAll(proposalRepository.findByStatusAndRequestedItem(ProposalStatus.PENDING, requestedItem));
-        toInvalidate.remove(accepted);
+    private void invalidateOtherPendingProposals(Proposal acceptedProposal, Item offeredItem, Item requestedItem) {
+        Set<Proposal> proposalsToInvalidate = new HashSet<>();
 
-        for (Proposal p : toInvalidate) {
-            p.setStatus(ProposalStatus.INVALIDATED);
+        proposalsToInvalidate.addAll(proposalRepository.findByStatusAndOfferedItem(ProposalStatus.PENDING, offeredItem));
+
+        proposalsToInvalidate.addAll(proposalRepository.findByStatusAndRequestedItem(ProposalStatus.PENDING, offeredItem));
+
+        proposalsToInvalidate.addAll(proposalRepository.findByStatusAndOfferedItem(ProposalStatus.PENDING, requestedItem));
+
+        proposalsToInvalidate.addAll(proposalRepository.findByStatusAndRequestedItem(ProposalStatus.PENDING, requestedItem));
+
+        proposalsToInvalidate.remove(acceptedProposal);
+
+        for (Proposal proposal : proposalsToInvalidate) {
+            proposal.setStatus(ProposalStatus.INVALIDATED);
         }
-        proposalRepository.saveAll(toInvalidate);
+
+        proposalRepository.saveAll(proposalsToInvalidate);
     }
 
     private boolean isParticipant(Proposal proposal, String email) {
         return proposal.getUser().getEmail().equals(email)
-                || proposal.getRequestedItem().getUser().getEmail().equals(email);
+                || proposal.getRequestedItem()
+                .getUser()
+                .getEmail()
+                .equals(email);
     }
 }

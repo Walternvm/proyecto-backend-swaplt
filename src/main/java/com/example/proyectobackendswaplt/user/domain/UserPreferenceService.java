@@ -4,8 +4,9 @@ import com.example.proyectobackendswaplt.auth.CurrentUserService;
 import com.example.proyectobackendswaplt.category.domain.Category;
 import com.example.proyectobackendswaplt.category.domain.CategoryService;
 import com.example.proyectobackendswaplt.common.exception.ConflictException;
-import com.example.proyectobackendswaplt.publication.domain.Publication;
-import com.example.proyectobackendswaplt.publication.domain.PublicationService;
+import com.example.proyectobackendswaplt.item.domain.Item;
+import com.example.proyectobackendswaplt.item.domain.ItemService;
+import com.example.proyectobackendswaplt.item.domain.ItemState;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,48 +18,62 @@ import java.util.List;
 public class UserPreferenceService {
     private final CurrentUserService currentUserService;
     private final UserService userService;
-    private final PublicationService publicationService;
+    private final ItemService itemService;
     private final CategoryService categoryService;
 
     @Transactional(readOnly = true)
-    public List<Publication> getFavorites() {
-        return List.copyOf(currentUserService.get().getFavorites());
+    public List<Item> getFavorites() {
+        User user = currentUserService.get();
+
+        return List.copyOf(user.getFavorites());
     }
 
     @Transactional
-    public void addFavorite(Long publicationId) {
+    public void addFavorite(Long itemId) {
         User user = currentUserService.get();
-        Publication publication = publicationService.findById(publicationId);
-        if (publication.getUser().getId().equals(user.getId())) {
-            throw new ConflictException("No puedes guardar tu propia publicacion como favorita");
+        Item item = itemService.findById(itemId);
+
+        if (item.getUser().getId().equals(user.getId())) {
+            throw new ConflictException("No puedes guardar tu propio item como favorito");
         }
-        boolean alreadySaved = user.getFavorites().stream()
-                .anyMatch(favorite -> favorite.getId().equals(publicationId));
+
+        if (item.getState() != ItemState.AVAILABLE) {
+            throw new ConflictException("Solo puedes guardar items disponibles como favoritos");
+        }
+
+        boolean alreadySaved = user.getFavorites().stream().anyMatch(favorite -> favorite.getId().equals(itemId));
+
         if (!alreadySaved) {
-            user.getFavorites().add(publication);
+            user.getFavorites().add(item);
             userService.save(user);
         }
     }
 
     @Transactional
-    public void removeFavorite(Long publicationId) {
+    public void removeFavorite(Long itemId) {
         User user = currentUserService.get();
-        if (user.getFavorites().removeIf(favorite -> favorite.getId().equals(publicationId))) {
+
+        boolean removed = user.getFavorites().removeIf(favorite -> favorite.getId().equals(itemId));
+
+        if (removed) {
             userService.save(user);
         }
     }
 
     @Transactional(readOnly = true)
     public List<Category> getInterests() {
-        return List.copyOf(currentUserService.get().getCategoriesOfInterest());
+        User user = currentUserService.get();
+
+        return List.copyOf(user.getCategoriesOfInterest());
     }
 
     @Transactional
     public void addInterest(Long categoryId) {
         User user = currentUserService.get();
         Category category = categoryService.findById(categoryId);
-        boolean alreadyAdded = user.getCategoriesOfInterest().stream()
-                .anyMatch(interest -> interest.getId().equals(categoryId));
+
+        boolean alreadyAdded = user.getCategoriesOfInterest().stream().anyMatch(interest -> interest.getId().equals(categoryId));
+
         if (!alreadyAdded) {
             user.getCategoriesOfInterest().add(category);
             userService.save(user);
@@ -68,14 +83,18 @@ public class UserPreferenceService {
     @Transactional
     public void removeInterest(Long categoryId) {
         User user = currentUserService.get();
-        if (user.getCategoriesOfInterest().removeIf(interest -> interest.getId().equals(categoryId))) {
+
+        boolean removed = user.getCategoriesOfInterest().removeIf(interest -> interest.getId().equals(categoryId));
+
+        if (removed) {
             userService.save(user);
         }
     }
 
     @Transactional(readOnly = true)
-    public List<Publication> getRecommendations() {
+    public List<Item> getRecommendations() {
         User user = currentUserService.get();
-        return publicationService.findActiveByCategoriesExcludingUser(user.getCategoriesOfInterest(), user);
+
+        return itemService.findAvailableByCategoriesExcludingUser(user.getCategoriesOfInterest(), user);
     }
 }

@@ -1,13 +1,13 @@
 package com.example.proyectobackendswaplt.review.application;
 
 import com.example.proyectobackendswaplt.review.domain.ReviewService;
-import com.example.proyectobackendswaplt.review.dto.ReviewRequest;
-import com.example.proyectobackendswaplt.review.dto.ReviewResponse;
+import com.example.proyectobackendswaplt.review.dto.ReviewMapper;
+import com.example.proyectobackendswaplt.review.dto.ReviewRequestDto;
+import com.example.proyectobackendswaplt.review.dto.ReviewResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,21 +17,29 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReviewController {
     private final ReviewService reviewService;
+    private final ReviewMapper reviewMapper;
 
     @PostMapping
-    public ResponseEntity<ReviewResponse> create(@Valid @RequestBody ReviewRequest request,
-                                                 Authentication authentication) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ReviewResponse.from(reviewService.create(request, authentication.getName())));
+    public ResponseEntity<ReviewResponseDto> create(@Valid @RequestBody ReviewRequestDto request) {
+        ReviewResponseDto response = reviewMapper.toResponseDto(reviewService.create(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<ReviewResponse>> findAll(@RequestParam(required = false) Long userId) {
-        return ResponseEntity.ok(reviewService.findAll(userId).stream().map(ReviewResponse::from).toList());
+    public ResponseEntity<List<ReviewResponseDto>> findAll() {
+        List<ReviewResponseDto> response = reviewService.findAllVisible().stream().map(reviewMapper::toResponseDto).toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<List<ReviewResponseDto>> findReceivedByUserId(@PathVariable Long userId) {
+        List<ReviewResponseDto> response = reviewService.findReceivedByUserId(userId).stream().map(reviewMapper::toResponseDto).toList();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ReviewResponse> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(ReviewResponse.from(reviewService.findById(id)));
+    public ResponseEntity<ReviewResponseDto> findById(@PathVariable Long id) {
+        ReviewResponseDto response = reviewMapper.toResponseDto(reviewService.findById(id));
+        return ResponseEntity.ok(response);
     }
 }

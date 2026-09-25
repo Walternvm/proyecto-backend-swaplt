@@ -23,17 +23,17 @@ public class RefreshToken {
     private Long id;
 
     @NotBlank
-    @Column(nullable = false, unique = true, length = 64)
+    @Column(nullable = false, unique = true, length = 64, updatable = false)
     private String token;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, updatable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
     @NotNull
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime expiresAt;
 
     @Column(nullable = false)

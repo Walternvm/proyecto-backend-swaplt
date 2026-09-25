@@ -38,9 +38,9 @@ public class Review {
     @JoinColumn(name = "receiver_id", nullable = false)
     private User receiver;
 
+    @NotNull
     @Min(1)
     @Max(5)
-    @NotNull
     @Column(nullable = false)
     private Integer rating;
 

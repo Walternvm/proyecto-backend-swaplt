@@ -1,6 +1,16 @@
 package com.example.proyectobackendswaplt.auth.event;
 
-import com.example.proyectobackendswaplt.user.domain.User;
+import lombok.Getter;
+import org.springframework.context.ApplicationEvent;
 
-public record UserRegisteredEvent(User user) {
+@Getter
+public class UserRegisteredEvent extends ApplicationEvent {
+    private final String userName;
+    private final String userEmail;
+
+    public UserRegisteredEvent(Object source, String userName, String userEmail) {
+        super(source);
+        this.userName = userName;
+        this.userEmail = userEmail;
+    }
 }

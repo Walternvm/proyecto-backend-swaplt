@@ -2,14 +2,13 @@ package com.example.proyectobackendswaplt.user.domain;
 
 import com.example.proyectobackendswaplt.category.domain.Category;
 import com.example.proyectobackendswaplt.item.domain.Item;
-import com.example.proyectobackendswaplt.publication.domain.Publication;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -38,17 +37,18 @@ public class User {
     @Email
     @NotBlank
     @Size(max = 255)
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 255)
     private String email;
 
     @JsonIgnore
     @NotBlank
-    @Column(nullable = false)
+    @Size(max = 255)
+    @Column(nullable = false, length = 255)
     private String password;
 
     @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private Role role = Role.USER;
 
     @JsonIgnore
@@ -56,18 +56,16 @@ public class User {
     private List<Item> items = new ArrayList<>();
 
     @JsonIgnore
-    @OneToMany(mappedBy = "user")
-    private List<Publication> publications = new ArrayList<>();
-
-    @JsonIgnore
     @ManyToMany
     @JoinTable(
             name = "favorites",
             joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "publication_id"),
-            uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "publication_id"})
+            inverseJoinColumns = @JoinColumn(name = "item_id"),
+            uniqueConstraints = @UniqueConstraint(
+                    columnNames = {"user_id", "item_id"}
+            )
     )
-    private List<Publication> favorites = new ArrayList<>();
+    private List<Item> favorites = new ArrayList<>();
 
     @JsonIgnore
     @ManyToMany
@@ -75,7 +73,9 @@ public class User {
             name = "categories_of_interest",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "category_id"),
-            uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "category_id"})
+            uniqueConstraints = @UniqueConstraint(
+                    columnNames = {"user_id", "category_id"}
+            )
     )
     private List<Category> categoriesOfInterest = new ArrayList<>();
 }

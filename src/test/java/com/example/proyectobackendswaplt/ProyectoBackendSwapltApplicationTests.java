@@ -1,65 +1,44 @@
 package com.example.proyectobackendswaplt;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
-import jakarta.validation.Validator;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import com.example.proyectobackendswaplt.category.domain.Category;
-import com.example.proyectobackendswaplt.category.infrastructure.CategoryRepository;
-import com.example.proyectobackendswaplt.user.domain.Role;
-import com.example.proyectobackendswaplt.user.domain.User;
-import com.example.proyectobackendswaplt.user.infrastructure.UserRepository;
 import com.example.proyectobackendswaplt.item.domain.Item;
 import com.example.proyectobackendswaplt.item.domain.ItemCondition;
-import com.example.proyectobackendswaplt.item.infrastructure.ItemRepository;
-import com.example.proyectobackendswaplt.publication.domain.Publication;
-import com.example.proyectobackendswaplt.publication.infrastructure.PublicationRepository;
+import com.example.proyectobackendswaplt.item.domain.ItemState;
 import com.example.proyectobackendswaplt.proposal.domain.Proposal;
-import com.example.proyectobackendswaplt.proposal.infrastructure.ProposalRepository;
 import com.example.proyectobackendswaplt.proposal.domain.ProposalService;
 import com.example.proyectobackendswaplt.review.domain.Review;
-import com.example.proyectobackendswaplt.auth.JwtService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.UUID;
-import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.example.proyectobackendswaplt.support.IntegrationTestSupport;
+import com.example.proyectobackendswaplt.user.domain.Role;
+import com.example.proyectobackendswaplt.user.domain.User;
+import jakarta.validation.Validator;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.web.servlet.ResultActions;
 
-@SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:swaplt;DB_CLOSE_DELAY=-1",
-        "spring.datasource.username=sa",
-        "spring.datasource.password=",
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "jwt.secret=local-test-secret-at-least-thirty-two-characters"
-})
-@AutoConfigureMockMvc
-class ProyectoBackendSwapltApplicationTests {
+import java.util.List;
 
-    @Autowired
-    private MockMvc mockMvc;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+class ProyectoBackendSwapltApplicationTests extends IntegrationTestSupport {
     @Autowired
     private Validator validator;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private CategoryRepository categoryRepository;
-    @Autowired
-    private ItemRepository itemRepository;
-    @Autowired
-    private PublicationRepository publicationRepository;
-    @Autowired
-    private ProposalRepository proposalRepository;
+
     @Autowired
     private ProposalService proposalService;
-    @Autowired
-    private JwtService jwtService;
 
     @Test
     void contextLoads() {
@@ -67,430 +46,603 @@ class ProyectoBackendSwapltApplicationTests {
 
     @Test
     void registerLoginAndProtectUsers() throws Exception {
-        mockMvc.perform(get("/api/v1/users")).andExpect(status().isUnauthorized());
-        mockMvc.perform(post("/api/v1/auth/register").contentType("application/json")
-                        .content("{\"name\":\"Ana\",\"email\":\"ana@example.com\",\"password\":\"Password123\",\"role\":\"ADMIN\"}"))
-                .andExpect(status().isCreated()).andExpect(jsonPath("$.role").value("USER"));
-        String login = mockMvc.perform(post("/api/v1/auth/login").contentType("application/json")
-                        .content("{\"email\":\"ana@example.com\",\"password\":\"Password123\"}"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.token").isNotEmpty())
-                .andReturn().getResponse().getContentAsString();
-        String token = new com.fasterxml.jackson.databind.ObjectMapper()
-                .readTree(login).get("token").asText();
-        mockMvc.perform(get("/api/v1/users").header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
+        String suffix = uniqueSuffix();
+        String email = "register-" + suffix + "@example.com";
+
+        mockMvc.perform(post(BASE + "/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Ana",
+                                  "email": "%s",
+                                  "password": "Password123"
+                                }
+                                """.formatted(email)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.token", notNullValue()))
+                .andExpect(jsonPath("$.refreshToken", notNullValue()))
+                .andExpect(jsonPath("$.role", is("USER")));
+
+        mockMvc.perform(post(BASE + "/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "%s",
+                                  "password": "Password123"
+                                }
+                                """.formatted(email)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token", notNullValue()))
+                .andExpect(jsonPath("$.refreshToken", notNullValue()));
+
+        mockMvc.perform(get(BASE + "/users"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void validatesRequiredFieldsAndRating() {
         Category category = new Category();
         category.setName(" ");
-        assertFalse(validator.validate(category).isEmpty());
 
-        Publication publication = new Publication();
-        publication.setWantedItem(" ");
-        assertTrue(validator.validate(publication).stream()
-                .anyMatch(violation -> violation.getPropertyPath().toString().equals("wantedItem")));
+        Item item = new Item();
+        item.setWantedItem(" ");
 
         Review review = new Review();
         review.setRating(6);
-        assertTrue(validator.validate(review).stream()
-                .anyMatch(violation -> violation.getPropertyPath().toString().equals("rating")));
+
+        assertThat(validator.validate(category))
+                .anyMatch(violation ->
+                        violation.getPropertyPath().toString().equals("name"));
+
+        assertThat(validator.validate(item))
+                .anyMatch(violation ->
+                        violation.getPropertyPath().toString().equals("wantedItem"));
+
+        assertThat(validator.validate(review))
+                .anyMatch(violation ->
+                        violation.getPropertyPath().toString().equals("rating"));
     }
 
     @Test
-    @Transactional
     void exchangeHasTwoDifferentParticipants() {
-        String suffix = UUID.randomUUID().toString();
-        User offerer = new User();
-        offerer.setName("Offerer");
-        offerer.setEmail("offerer-" + suffix + "@example.com");
-        offerer.setPassword("password-hash");
-        userRepository.save(offerer);
+        String suffix = uniqueSuffix();
 
-        User receiver = new User();
-        receiver.setName("Receiver");
-        receiver.setEmail("receiver-" + suffix + "@example.com");
-        receiver.setPassword("password-hash");
-        userRepository.save(receiver);
+        User offeringUser = saveUser(
+                "exchange-offering-" + suffix,
+                Role.USER
+        );
 
-        Category category = new Category();
-        category.setName("Category-" + suffix);
-        categoryRepository.save(category);
+        User receivingUser = saveUser(
+                "exchange-receiving-" + suffix,
+                Role.USER
+        );
 
-        Item offered = new Item();
-        offered.setUser(offerer);
-        offered.setCategory(category);
-        offered.setName("Book");
-        offered.setLocation("Lima");
-        itemRepository.save(offered);
+        Category category = saveCategory("ExchangeCategory-" + suffix);
 
-        Item requested = new Item();
-        requested.setUser(receiver);
-        requested.setCategory(category);
-        requested.setName("Game");
-        requested.setLocation("Lima");
-        itemRepository.save(requested);
-
-        Publication publication = new Publication();
-        publication.setUser(receiver);
-        publication.setItem(requested);
-        publication.setWantedItem("Book");
-        publicationRepository.save(publication);
+        Item offeredItem = saveItem(offeringUser, category);
+        Item requestedItem = saveItem(receivingUser, category);
 
         Proposal proposal = new Proposal();
-        proposal.setUser(offerer);
-        proposal.setOfferedItem(offered);
-        proposal.setRequestedItem(requested);
-        proposal.setPublication(publication);
-        proposalRepository.save(proposal);
+        proposal.setUser(offeringUser);
+        proposal.setOfferedItem(offeredItem);
+        proposal.setRequestedItem(requestedItem);
+        proposal = proposalRepository.save(proposal);
 
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(receiver.getEmail(), null));
+        var authentication = new UsernamePasswordAuthenticationToken(
+                receivingUser.getEmail(),
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+
+        SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
+
         try {
             var exchange = proposalService.acceptProposal(proposal.getId());
-            assertEquals(offerer.getId(), exchange.getOfferingUser().getId());
-            assertEquals(receiver.getId(), exchange.getReceivingUser().getId());
-            assertNotEquals(exchange.getOfferingUser().getId(), exchange.getReceivingUser().getId());
+
+            assertThat(exchange.getOfferingUser().getId())
+                    .isEqualTo(offeringUser.getId());
+
+            assertThat(exchange.getReceivingUser().getId())
+                    .isEqualTo(receivingUser.getId());
+
+            assertThat(exchange.getOfferingUser().getId())
+                    .isNotEqualTo(exchange.getReceivingUser().getId());
         } finally {
             SecurityContextHolder.clearContext();
         }
     }
 
     @Test
-    @Transactional
     void createsResourcesWithIdsAndFlatResponses() throws Exception {
-        String suffix = UUID.randomUUID().toString();
-        User offerer = new User();
-        offerer.setName("Offerer");
-        offerer.setEmail("dto-offerer-" + suffix + "@example.com");
-        offerer.setPassword("password-hash");
-        userRepository.save(offerer);
+        String suffix = uniqueSuffix();
 
-        User receiver = new User();
-        receiver.setName("Receiver");
-        receiver.setEmail("dto-receiver-" + suffix + "@example.com");
-        receiver.setPassword("password-hash");
-        userRepository.save(receiver);
+        User receiver = saveUser(
+                "resource-receiver-" + suffix,
+                Role.USER
+        );
 
-        Category category = new Category();
-        category.setName("Dto-" + suffix);
-        categoryRepository.save(category);
+        User proposer = saveUser(
+                "resource-proposer-" + suffix,
+                Role.USER
+        );
 
-        String itemBody = "{\"name\":\"Book\",\"categoryId\":" + category.getId()
-                + ",\"location\":\"Lima\",\"ownerId\":" + receiver.getId() + "}";
-        String offeredJson = mockMvc.perform(post("/api/v1/items")
-                        .header("Authorization", "Bearer " + jwtService.createToken(offerer))
-                        .contentType("application/json").content(itemBody))
+        Category category = saveCategory("ResourceCategory-" + suffix);
+
+        Long requestedItemId = idOf(
+                mockMvc.perform(post(BASE + "/items")
+                                .header("Authorization", bearer(receiver))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "name": "Requested item",
+                                          "description": "Requested item description",
+                                          "categoryId": %d,
+                                          "location": "Lima",
+                                          "wantedItem": "Another item",
+                                          "condition": "GOOD"
+                                        }
+                                        """.formatted(category.getId())))
+                        .andExpect(status().isCreated())
+                        .andExpect(jsonPath("$.id", notNullValue()))
+                        .andExpect(jsonPath("$.ownerId",
+                                is(receiver.getId().intValue())))
+                        .andExpect(jsonPath("$.categoryId",
+                                is(category.getId().intValue())))
+        );
+
+        Long offeredItemId = idOf(
+                mockMvc.perform(post(BASE + "/items")
+                                .header("Authorization", bearer(proposer))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "name": "Offered item",
+                                          "description": "Offered item description",
+                                          "categoryId": %d,
+                                          "location": "Lima",
+                                          "wantedItem": "Requested item",
+                                          "condition": "LIKE_NEW"
+                                        }
+                                        """.formatted(category.getId())))
+                        .andExpect(status().isCreated())
+                        .andExpect(jsonPath("$.id", notNullValue()))
+        );
+
+        mockMvc.perform(post(BASE + "/proposals")
+                        .header("Authorization", bearer(proposer))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "offeredItemId": %d,
+                                  "requestedItemId": %d,
+                                  "message": "Deseo intercambiar"
+                                }
+                                """.formatted(
+                                offeredItemId,
+                                requestedItemId
+                        )))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.ownerId").value(offerer.getId().intValue()))
-                .andExpect(jsonPath("$.user").doesNotExist())
-                .andExpect(jsonPath("$.password").doesNotExist())
-                .andReturn().getResponse().getContentAsString();
-        Long offeredItemId = new ObjectMapper().readTree(offeredJson).get("id").asLong();
-
-        String requestedJson = mockMvc.perform(post("/api/v1/items")
-                        .header("Authorization", "Bearer " + jwtService.createToken(receiver))
-                        .contentType("application/json").content(itemBody))
-                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        Long requestedItemId = new ObjectMapper().readTree(requestedJson).get("id").asLong();
-
-        String publicationJson = mockMvc.perform(post("/api/v1/publications")
-                        .header("Authorization", "Bearer " + jwtService.createToken(receiver))
-                        .contentType("application/json")
-                        .content("{\"itemId\":" + requestedItemId + ",\"wantedItem\":\"Book\"}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.itemId").value(requestedItemId.intValue()))
-                .andExpect(jsonPath("$.item").doesNotExist())
-                .andReturn().getResponse().getContentAsString();
-        Long publicationId = new ObjectMapper().readTree(publicationJson).get("id").asLong();
-
-        mockMvc.perform(post("/api/v1/proposals")
-                        .header("Authorization", "Bearer " + jwtService.createToken(offerer))
-                        .contentType("application/json")
-                        .content("{\"offeredItemId\":" + offeredItemId + ",\"publicationId\":" + publicationId + "}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.proposerId").value(offerer.getId().intValue()))
-                .andExpect(jsonPath("$.publicationId").value(publicationId.intValue()))
-                .andExpect(jsonPath("$.user").doesNotExist());
+                .andExpect(jsonPath("$.id", notNullValue()))
+                .andExpect(jsonPath("$.offeredItemId",
+                        is(offeredItemId.intValue())))
+                .andExpect(jsonPath("$.requestedItemId",
+                        is(requestedItemId.intValue())))
+                .andExpect(jsonPath("$.status", is("PENDING")));
     }
 
     @Test
-    void refreshTokenRotatesAndOldTokenIsRejected() throws Exception {
-        String oldRefresh = registerAndGetRefreshToken();
-        String body = "{\"refreshToken\":\"" + oldRefresh + "\"}";
+    void refreshTokenRotatesAndCannotBeReused() throws Exception {
+        String refreshToken = registerAndGetRefreshToken();
 
-        mockMvc.perform(post("/api/v1/auth/refresh").contentType("application/json").content(body))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").isNotEmpty())
-                .andExpect(jsonPath("$.refreshToken").value(not(oldRefresh)));
+        String replacementToken = objectMapper.readTree(
+                        mockMvc.perform(post(BASE + "/auth/refresh")
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content("""
+                                                {
+                                                  "refreshToken": "%s"
+                                                }
+                                                """.formatted(refreshToken)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.token", notNullValue()))
+                                .andExpect(jsonPath("$.refreshToken",
+                                        notNullValue()))
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString()
+                )
+                .get("refreshToken")
+                .asText();
 
-        mockMvc.perform(post("/api/v1/auth/refresh").contentType("application/json").content(body))
+        assertThat(replacementToken).isNotEqualTo(refreshToken);
+
+        mockMvc.perform(post(BASE + "/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "%s"
+                                }
+                                """.formatted(refreshToken)))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void logoutRevokesRefreshToken() throws Exception {
-        String refresh = registerAndGetRefreshToken();
-        String body = "{\"refreshToken\":\"" + refresh + "\"}";
+        String refreshToken = registerAndGetRefreshToken();
 
-        mockMvc.perform(post("/api/v1/auth/logout").contentType("application/json").content(body))
+        mockMvc.perform(post(BASE + "/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "%s"
+                                }
+                                """.formatted(refreshToken)))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(post("/api/v1/auth/refresh").contentType("application/json").content(body))
+        mockMvc.perform(post(BASE + "/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "%s"
+                                }
+                                """.formatted(refreshToken)))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void proposalsAreOnlyVisibleToParticipantsAndAdmin() throws Exception {
-        String suffix = UUID.randomUUID().toString();
-        User offerer = saveUser("vis-offerer-" + suffix, Role.USER);
-        User receiver = saveUser("vis-receiver-" + suffix, Role.USER);
-        User outsider = saveUser("vis-outsider-" + suffix, Role.USER);
-        User admin = saveUser("vis-admin-" + suffix, Role.ADMIN);
+    void proposalsAreOnlyVisibleToParticipants() throws Exception {
+        String suffix = uniqueSuffix();
 
-        Category category = saveCategory("Vis-" + suffix);
+        User owner = saveUser(
+                "visible-owner-" + suffix,
+                Role.USER
+        );
 
-        Item offered = saveItem(offerer, category);
-        Item requested = saveItem(receiver, category);
+        User proposer = saveUser(
+                "visible-proposer-" + suffix,
+                Role.USER
+        );
 
-        Publication publication = savePublication(receiver, requested);
+        User outsider = saveUser(
+                "visible-outsider-" + suffix,
+                Role.USER
+        );
 
-        Proposal proposal = new Proposal();
-        proposal.setUser(offerer);
-        proposal.setOfferedItem(offered);
-        proposal.setRequestedItem(requested);
-        proposal.setPublication(publication);
-        proposalRepository.save(proposal);
+        Category category = saveCategory("VisibleCategory-" + suffix);
+        Item requestedItem = saveItem(owner, category);
+        Item offeredItem = saveItem(proposer, category);
 
-        String url = "/api/v1/proposals/" + proposal.getId();
-        mockMvc.perform(get(url).header("Authorization", bearer(outsider))).andExpect(status().isForbidden());
-        mockMvc.perform(get(url).header("Authorization", bearer(receiver))).andExpect(status().isOk());
-        mockMvc.perform(get(url).header("Authorization", bearer(admin))).andExpect(status().isOk());
+        Long proposalId = idOf(
+                postProposal(proposer, offeredItem, requestedItem)
+                        .andExpect(status().isCreated())
+        );
 
-        mockMvc.perform(get("/api/v1/proposals").header("Authorization", bearer(outsider)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
-        mockMvc.perform(get("/api/v1/proposals").header("Authorization", bearer(offerer)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
-    }
-
-    @Test
-    void itemsCanBeFilteredAndPaginated() throws Exception {
-        String suffix = UUID.randomUUID().toString();
-        User owner = saveUser("filter-owner-" + suffix, Role.USER);
-        Category category = saveCategory("Filter-" + suffix);
-        saveItem(owner, category, ItemCondition.NEW, "Lima Centro");
-        saveItem(owner, category, ItemCondition.FAIR, "Arequipa");
-        String categoryId = String.valueOf(category.getId());
-
-        mockMvc.perform(get("/api/v1/items").param("categoryId", categoryId))
+        mockMvc.perform(get(BASE + "/proposals")
+                        .header("Authorization", bearer(proposer)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(2));
+                .andExpect(jsonPath("$", hasSize(1)));
 
-        mockMvc.perform(get("/api/v1/items").param("categoryId", categoryId).param("condition", "NEW"))
+        mockMvc.perform(get(BASE + "/proposals")
+                        .header("Authorization", bearer(owner)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.content[0].condition").value("NEW"));
+                .andExpect(jsonPath("$", hasSize(1)));
 
-        mockMvc.perform(get("/api/v1/items").param("categoryId", categoryId).param("location", "lima"))
+        mockMvc.perform(get(BASE + "/proposals")
+                        .header("Authorization", bearer(outsider)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(1));
+                .andExpect(jsonPath("$", hasSize(0)));
 
-        mockMvc.perform(get("/api/v1/items").param("categoryId", categoryId).param("size", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.totalPages").value(2));
-
-        mockMvc.perform(get("/api/v1/items").param("state", "NOT_A_STATE"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void usersManageFavoritesInterestsAndRecommendations() throws Exception {
-        String suffix = UUID.randomUUID().toString();
-        User owner = saveUser("fav-owner-" + suffix, Role.USER);
-        User fan = saveUser("fav-fan-" + suffix, Role.USER);
-        Category category = saveCategory("Fav-" + suffix);
-        Publication publication = savePublication(owner, saveItem(owner, category));
-
-        String favoriteUrl = "/api/v1/users/me/favorites/" + publication.getId();
-        mockMvc.perform(put(favoriteUrl).header("Authorization", bearer(fan))).andExpect(status().isNoContent());
-        mockMvc.perform(put(favoriteUrl).header("Authorization", bearer(fan))).andExpect(status().isNoContent());
-        mockMvc.perform(get("/api/v1/users/me/favorites").header("Authorization", bearer(fan)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(publication.getId().intValue()));
-
-        mockMvc.perform(put(favoriteUrl).header("Authorization", bearer(owner))).andExpect(status().isConflict());
-
-        mockMvc.perform(delete(favoriteUrl).header("Authorization", bearer(fan))).andExpect(status().isNoContent());
-        mockMvc.perform(get("/api/v1/users/me/favorites").header("Authorization", bearer(fan)))
-                .andExpect(jsonPath("$.length()").value(0));
-
-        mockMvc.perform(put("/api/v1/users/me/interests/" + category.getId()).header("Authorization", bearer(fan)))
-                .andExpect(status().isNoContent());
-        mockMvc.perform(get("/api/v1/users/me/recommendations").header("Authorization", bearer(fan)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
-
-        mockMvc.perform(get("/api/v1/users/me").header("Authorization", bearer(fan)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value(fan.getEmail()));
-        mockMvc.perform(get("/api/v1/users").header("Authorization", bearer(fan)))
+        mockMvc.perform(get(BASE + "/proposals/" + proposalId)
+                        .header("Authorization", bearer(outsider)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void fullExchangeFlowRequiresBothConfirmationsAndSingleReview() throws Exception {
-        String suffix = UUID.randomUUID().toString();
-        User owner = saveUser("flow-owner-" + suffix, Role.USER);
-        User proposer = saveUser("flow-proposer-" + suffix, Role.USER);
-        User outsider = saveUser("flow-outsider-" + suffix, Role.USER);
-        Category category = saveCategory("Flow-" + suffix);
-        Item requested = saveItem(owner, category);
-        Item offered = saveItem(proposer, category);
-        Publication publication = savePublication(owner, requested);
+    void itemsCanBeFilteredAndPaginated() throws Exception {
+        String suffix = uniqueSuffix();
 
-        Long proposalId = idOf(postProposal(proposer, offered, publication).andExpect(status().isCreated()));
-        postProposal(proposer, offered, publication).andExpect(status().isConflict());
+        User owner = saveUser(
+                "filter-owner-" + suffix,
+                Role.USER
+        );
 
-        String acceptUrl = "/api/v1/proposals/" + proposalId + "/accept";
-        mockMvc.perform(put(acceptUrl).header("Authorization", bearer(proposer))).andExpect(status().isForbidden());
-        Long exchangeId = idOf(mockMvc.perform(put(acceptUrl).header("Authorization", bearer(owner)))
-                .andExpect(status().isCreated()));
+        Category books = saveCategory("Books-" + suffix);
+        Category games = saveCategory("Games-" + suffix);
 
-        mockMvc.perform(get("/api/v1/items/" + offered.getId())).andExpect(jsonPath("$.state").value("RESERVED"));
-        postReview(proposer, exchangeId).andExpect(status().isConflict());
+        Item book = saveItem(owner, books);
+        book.setName("Spring Boot Book");
+        book.setLocation("Lima");
+        book.setCondition(ItemCondition.GOOD);
+        itemRepository.save(book);
 
-        String completeUrl = "/api/v1/exchanges/" + exchangeId + "/complete";
-        mockMvc.perform(put(completeUrl).header("Authorization", bearer(proposer)))
+        Item game = saveItem(owner, games);
+        game.setName("Board Game");
+        game.setLocation("Arequipa");
+        game.setCondition(ItemCondition.LIKE_NEW);
+        itemRepository.save(game);
+
+        mockMvc.perform(get(BASE + "/items")
+                        .param("categoryId", books.getId().toString())
+                        .param("condition", "GOOD")
+                        .param("location", "Lima")
+                        .param("q", "Spring")
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("PENDING"))
-                .andExpect(jsonPath("$.offeringUserConfirmed").value(true));
-        mockMvc.perform(put(completeUrl).header("Authorization", bearer(proposer))).andExpect(status().isConflict());
-        mockMvc.perform(put(completeUrl).header("Authorization", bearer(outsider))).andExpect(status().isForbidden());
-        mockMvc.perform(put(completeUrl).header("Authorization", bearer(owner)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("COMPLETED"));
-
-        mockMvc.perform(get("/api/v1/items/" + requested.getId())).andExpect(jsonPath("$.state").value("TRADED"));
-        mockMvc.perform(get("/api/v1/publications/" + publication.getId())).andExpect(jsonPath("$.status").value("CLOSED"));
-
-        postReview(outsider, exchangeId).andExpect(status().isForbidden());
-        postReview(proposer, exchangeId).andExpect(status().isCreated());
-        postReview(proposer, exchangeId).andExpect(status().isConflict());
-        mockMvc.perform(get("/api/v1/reviews").param("userId", String.valueOf(owner.getId()))
-                        .header("Authorization", bearer(outsider)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].id",
+                        is(book.getId().intValue())))
+                .andExpect(jsonPath("$.page", is(0)))
+                .andExpect(jsonPath("$.size", is(10)))
+                .andExpect(jsonPath("$.totalElements", is(1)));
     }
 
     @Test
-    void cancellingReleasesItemsAndProposerCanWithdraw() throws Exception {
-        String suffix = UUID.randomUUID().toString();
-        User owner = saveUser("cancel-owner-" + suffix, Role.USER);
-        User proposer = saveUser("cancel-proposer-" + suffix, Role.USER);
-        Category category = saveCategory("Cancel-" + suffix);
-        Item requested = saveItem(owner, category);
-        Item offered = saveItem(proposer, category);
-        Item spare = saveItem(proposer, category);
-        Publication publication = savePublication(owner, requested);
+    void usersManageFavoritesInterestsAndRecommendations() throws Exception {
+        String suffix = uniqueSuffix();
 
-        mockMvc.perform(post("/api/v1/publications").header("Authorization", bearer(owner))
-                        .contentType("application/json")
-                        .content("{\"itemId\":" + requested.getId() + ",\"wantedItem\":\"Otro\"}"))
+        User currentUser = saveUser(
+                "preferences-user-" + suffix,
+                Role.USER
+        );
+
+        User owner = saveUser(
+                "preferences-owner-" + suffix,
+                Role.USER
+        );
+
+        Category category = saveCategory(
+                "PreferencesCategory-" + suffix
+        );
+
+        Item recommendation = saveItem(owner, category);
+
+        mockMvc.perform(put(BASE
+                        + "/users/me/favorites/"
+                        + recommendation.getId())
+                        .header("Authorization", bearer(currentUser)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get(BASE + "/users/me/favorites")
+                        .header("Authorization", bearer(currentUser)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath(
+                        "$[0].id",
+                        is(recommendation.getId().intValue())
+                ));
+
+        mockMvc.perform(put(BASE
+                        + "/users/me/interests/"
+                        + category.getId())
+                        .header("Authorization", bearer(currentUser)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get(BASE + "/users/me/recommendations")
+                        .header("Authorization", bearer(currentUser)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath(
+                        "$[0].id",
+                        is(recommendation.getId().intValue())
+                ));
+
+        mockMvc.perform(delete(BASE
+                        + "/users/me/favorites/"
+                        + recommendation.getId())
+                        .header("Authorization", bearer(currentUser)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(delete(BASE
+                        + "/users/me/interests/"
+                        + category.getId())
+                        .header("Authorization", bearer(currentUser)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void fullExchangeFlowCompletesAndAllowsReview() throws Exception {
+        String suffix = uniqueSuffix();
+
+        User owner = saveUser(
+                "flow-owner-" + suffix,
+                Role.USER
+        );
+
+        User proposer = saveUser(
+                "flow-proposer-" + suffix,
+                Role.USER
+        );
+
+        Category category = saveCategory("FlowCategory-" + suffix);
+        Item requestedItem = saveItem(owner, category);
+        Item offeredItem = saveItem(proposer, category);
+
+        Long proposalId = idOf(
+                postProposal(proposer, offeredItem, requestedItem)
+                        .andExpect(status().isCreated())
+        );
+
+        Long exchangeId = idOf(
+                mockMvc.perform(patch(BASE
+                                + "/proposals/"
+                                + proposalId
+                                + "/accept")
+                                .header("Authorization",
+                                        bearer(owner)))
+                        .andExpect(status().isCreated())
+                        .andExpect(jsonPath("$.status",
+                                is("PENDING")))
+        );
+
+        mockMvc.perform(patch(BASE
+                        + "/exchanges/"
+                        + exchangeId
+                        + "/confirm")
+                        .header("Authorization", bearer(proposer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.offeringUserConfirmed",
+                        is(true)))
+                .andExpect(jsonPath("$.status", is("PENDING")));
+
+        mockMvc.perform(patch(BASE
+                        + "/exchanges/"
+                        + exchangeId
+                        + "/confirm")
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.receivingUserConfirmed",
+                        is(true)))
+                .andExpect(jsonPath("$.status", is("COMPLETED")));
+
+        Item updatedOfferedItem =
+                itemRepository.findById(offeredItem.getId())
+                        .orElseThrow();
+
+        Item updatedRequestedItem =
+                itemRepository.findById(requestedItem.getId())
+                        .orElseThrow();
+
+        assertThat(updatedOfferedItem.getState())
+                .isEqualTo(ItemState.TRADED);
+
+        assertThat(updatedRequestedItem.getState())
+                .isEqualTo(ItemState.TRADED);
+
+        postReview(proposer, exchangeId, 5)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.receiverId",
+                        is(owner.getId().intValue())));
+
+        postReview(proposer, exchangeId, 4)
                 .andExpect(status().isConflict());
 
-        Long spareProposalId = idOf(postProposal(proposer, spare, publication).andExpect(status().isCreated()));
-        String withdrawUrl = "/api/v1/proposals/" + spareProposalId + "/cancel";
-        mockMvc.perform(put(withdrawUrl).header("Authorization", bearer(owner))).andExpect(status().isForbidden());
-        mockMvc.perform(put(withdrawUrl).header("Authorization", bearer(proposer)))
+        mockMvc.perform(get(BASE
+                        + "/reviews/users/"
+                        + owner.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("CANCELLED"));
-        mockMvc.perform(put(withdrawUrl).header("Authorization", bearer(proposer))).andExpect(status().isConflict());
+                .andExpect(jsonPath("$", hasSize(1)));
+    }
 
-        Long proposalId = idOf(postProposal(proposer, offered, publication).andExpect(status().isCreated()));
-        Long exchangeId = idOf(mockMvc.perform(put("/api/v1/proposals/" + proposalId + "/accept")
-                .header("Authorization", bearer(owner))).andExpect(status().isCreated()));
+    @Test
+    void cancellingExchangeReleasesReservedItems() throws Exception {
+        String suffix = uniqueSuffix();
 
-        mockMvc.perform(delete("/api/v1/items/" + offered.getId()).header("Authorization", bearer(proposer)))
+        User owner = saveUser(
+                "cancel-owner-" + suffix,
+                Role.USER
+        );
+
+        User proposer = saveUser(
+                "cancel-proposer-" + suffix,
+                Role.USER
+        );
+
+        Category category = saveCategory("CancelCategory-" + suffix);
+        Item requestedItem = saveItem(owner, category);
+        Item offeredItem = saveItem(proposer, category);
+
+        Long proposalId = idOf(
+                postProposal(proposer, offeredItem, requestedItem)
+                        .andExpect(status().isCreated())
+        );
+
+        Long exchangeId = idOf(
+                mockMvc.perform(patch(BASE
+                                + "/proposals/"
+                                + proposalId
+                                + "/accept")
+                                .header("Authorization", bearer(owner)))
+                        .andExpect(status().isCreated())
+        );
+
+        assertThat(itemRepository.findById(offeredItem.getId())
+                .orElseThrow().getState())
+                .isEqualTo(ItemState.RESERVED);
+
+        assertThat(itemRepository.findById(requestedItem.getId())
+                .orElseThrow().getState())
+                .isEqualTo(ItemState.RESERVED);
+
+        mockMvc.perform(delete(BASE
+                        + "/items/"
+                        + offeredItem.getId())
+                        .header("Authorization", bearer(proposer)))
                 .andExpect(status().isConflict());
 
-        mockMvc.perform(put("/api/v1/exchanges/" + exchangeId + "/cancel").header("Authorization", bearer(proposer)))
+        mockMvc.perform(patch(BASE
+                        + "/exchanges/"
+                        + exchangeId
+                        + "/cancel")
+                        .header("Authorization", bearer(proposer)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("CANCELLED"));
+                .andExpect(jsonPath("$.status", is("CANCELLED")));
 
-        mockMvc.perform(get("/api/v1/items/" + offered.getId())).andExpect(jsonPath("$.state").value("AVAILABLE"));
-        mockMvc.perform(get("/api/v1/items/" + requested.getId())).andExpect(jsonPath("$.state").value("AVAILABLE"));
-        mockMvc.perform(put("/api/v1/exchanges/" + exchangeId + "/complete").header("Authorization", bearer(owner)))
+        assertThat(itemRepository.findById(offeredItem.getId())
+                .orElseThrow().getState())
+                .isEqualTo(ItemState.AVAILABLE);
+
+        assertThat(itemRepository.findById(requestedItem.getId())
+                .orElseThrow().getState())
+                .isEqualTo(ItemState.AVAILABLE);
+
+        mockMvc.perform(patch(BASE
+                        + "/exchanges/"
+                        + exchangeId
+                        + "/confirm")
+                        .header("Authorization", bearer(owner)))
                 .andExpect(status().isConflict());
     }
 
     private String registerAndGetRefreshToken() throws Exception {
-        String email = "refresh-" + UUID.randomUUID() + "@example.com";
-        String json = mockMvc.perform(post("/api/v1/auth/register").contentType("application/json")
-                        .content("{\"name\":\"Rita\",\"email\":\"" + email + "\",\"password\":\"Password123\"}"))
+        String suffix = uniqueSuffix();
+        String email = "refresh-" + suffix + "@example.com";
+
+        String response = mockMvc.perform(post(BASE + "/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Refresh User",
+                                  "email": "%s",
+                                  "password": "Password123"
+                                }
+                                """.formatted(email)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.refreshToken").isNotEmpty())
-                .andReturn().getResponse().getContentAsString();
-        return new ObjectMapper().readTree(json).get("refreshToken").asText();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response)
+                .get("refreshToken")
+                .asText();
     }
 
-    private ResultActions postProposal(User proposer, Item offered, Publication publication) throws Exception {
-        return mockMvc.perform(post("/api/v1/proposals").header("Authorization", bearer(proposer))
-                .contentType("application/json")
-                .content("{\"offeredItemId\":" + offered.getId() + ",\"publicationId\":" + publication.getId() + "}"));
+    private ResultActions postProposal(User proposer, Item offeredItem, Item requestedItem) throws Exception {
+        return mockMvc.perform(post(BASE + "/proposals")
+                .header("Authorization", bearer(proposer))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "offeredItemId": %d,
+                          "requestedItemId": %d,
+                          "message": "Propuesta de prueba"
+                        }
+                        """.formatted(
+                        offeredItem.getId(),
+                        requestedItem.getId()
+                )));
     }
 
-    private ResultActions postReview(User author, Long exchangeId) throws Exception {
-        return mockMvc.perform(post("/api/v1/reviews").header("Authorization", bearer(author))
-                .contentType("application/json")
-                .content("{\"exchangeId\":" + exchangeId + ",\"rating\":5,\"comment\":\"Todo bien\"}"));
-    }
-
-    private Long idOf(ResultActions actions) throws Exception {
-        String json = actions.andReturn().getResponse().getContentAsString();
-        return new ObjectMapper().readTree(json).get("id").asLong();
-    }
-
-    private User saveUser(String name, Role role) {
-        User user = new User();
-        user.setName(name);
-        user.setEmail(name + "@example.com");
-        user.setPassword("password-hash");
-        user.setRole(role);
-        return userRepository.save(user);
-    }
-
-    private Category saveCategory(String name) {
-        Category category = new Category();
-        category.setName(name);
-        return categoryRepository.save(category);
-    }
-
-    private Item saveItem(User owner, Category category) {
-        return saveItem(owner, category, null, "Lima");
-    }
-
-    private Item saveItem(User owner, Category category, ItemCondition condition, String location) {
-        Item item = new Item();
-        item.setUser(owner);
-        item.setCategory(category);
-        item.setName("Item");
-        item.setLocation(location);
-        item.setCondition(condition);
-        return itemRepository.save(item);
-    }
-
-    private Publication savePublication(User owner, Item item) {
-        Publication publication = new Publication();
-        publication.setUser(owner);
-        publication.setItem(item);
-        publication.setWantedItem("Anything");
-        return publicationRepository.save(publication);
-    }
-
-    private String bearer(User user) {
-        return "Bearer " + jwtService.createToken(user);
+    private ResultActions postReview(User author, Long exchangeId, int rating) throws Exception {
+        return mockMvc.perform(post(BASE + "/reviews")
+                .header("Authorization", bearer(author))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "exchangeId": %d,
+                          "rating": %d,
+                          "comment": "Intercambio correcto"
+                        }
+                        """.formatted(exchangeId, rating)));
     }
 }

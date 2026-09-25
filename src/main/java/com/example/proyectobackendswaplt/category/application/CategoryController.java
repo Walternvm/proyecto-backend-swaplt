@@ -1,13 +1,13 @@
 package com.example.proyectobackendswaplt.category.application;
 
 import com.example.proyectobackendswaplt.category.domain.CategoryService;
-import com.example.proyectobackendswaplt.category.dto.CategoryRequest;
-import com.example.proyectobackendswaplt.category.dto.CategoryResponse;
+import com.example.proyectobackendswaplt.category.dto.CategoryMapper;
+import com.example.proyectobackendswaplt.category.dto.CategoryRequestDto;
+import com.example.proyectobackendswaplt.category.dto.CategoryResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,26 +17,27 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CategoryController {
     private final CategoryService categoryService;
+    private final CategoryMapper categoryMapper;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CategoryResponse> create(@Valid @RequestBody CategoryRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(CategoryResponse.from(categoryService.create(request)));
+    public ResponseEntity<CategoryResponseDto> create(@Valid @RequestBody CategoryRequestDto request) {
+        CategoryResponseDto response = categoryMapper.toResponseDto(categoryService.create(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<CategoryResponse>> findAll() {
-        return ResponseEntity.ok(categoryService.findAll().stream().map(CategoryResponse::from).toList());
+    public ResponseEntity<List<CategoryResponseDto>> findAll() {
+        List<CategoryResponseDto> response = categoryService.findAll().stream().map(categoryMapper::toResponseDto).toList();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryResponse> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(CategoryResponse.from(categoryService.findById(id)));
+    public ResponseEntity<CategoryResponseDto> findById(@PathVariable Long id) {
+        CategoryResponseDto response = categoryMapper.toResponseDto(categoryService.findById(id));
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         categoryService.delete(id);
         return ResponseEntity.noContent().build();
