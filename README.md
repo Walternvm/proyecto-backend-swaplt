@@ -1,6 +1,6 @@
 # SwapIt Backend
 
-## CS 2031 Desarrollo Basado en Plataforma
+## CS2031 Desarrollo Basado en Plataforma
 
 ### Integrantes
 
@@ -25,16 +25,16 @@
 11. [API REST](#11-api-rest)
 12. [Pruebas](#12-pruebas)
 13. [GitHub y gestión](#13-github-y-gestión)
-14. [Despliegue](#14-despliegue)
+14. [Despliegue en AWS](#14-despliegue-en-aws)
 15. [Ejecución local](#15-ejecución-local)
 16. [Conclusión](#16-conclusión)
 17. [Referencias](#17-referencias)
 
 ## 1. Introducción
 
-Muchas personas tienen objetos que dejaron de utilizar, aunque estos todavía se encuentran en buenas condiciones. Al mismo tiempo, otras personas podrían necesitar esos objetos y ofrecer algo diferente a cambio.
+Muchas personas conservan objetos que ya no utilizan, aunque todavía están en buenas condiciones. Otras podrían necesitarlos y ofrecer algo a cambio.
 
-El problema es que estos intercambios normalmente se coordinan mediante redes sociales o grupos de mensajes. La información queda desordenada y aveces resulta difícil encontrar una persona que tenga lo que buscamos.
+Estos intercambios suelen coordinarse mediante redes sociales o grupos de mensajes. La información queda desordenada y dificulta encontrar lo que se busca.
 
 SwapIt busca organizar este proceso mediante una plataforma donde los usuarios publican sus objetos, buscan otros productos y envían propuestas de intercambio.
 
@@ -50,17 +50,17 @@ SwapIt busca organizar este proceso mediante una plataforma donde los usuarios p
 
 ## 2. Problema identificado
 
-Las plataformas de venta están pensadas principalmente para operaciones con dinero. En un intercambio directo se necesita conocer qué ofrece cada usuario, qué busca y si ambos objetos continúan disponibles.
+Las plataformas de venta se centran en operaciones con dinero. Un intercambio directo requiere conocer qué ofrece cada usuario, qué busca y si los objetos continúan disponibles.
 
 Usar publicaciones dispersas también puede ocasionar propuestas duplicadas, confusión sobre el estado de los objetos y poca seguridad sobre la identidad de las personas.
 
-Resolver este problema permite promover la reutilización de objetos y reducir compras que quizá no sean necesarias. También ayuda a que los intercambios tengan estados y reglas mas claras.
+Resolverlo promueve la reutilización, reduce compras innecesarias y permite intercambios con estados y reglas más claras.
 
 ## 3. Solución propuesta
 
 SwapIt es una API REST para administrar intercambios de objetos entre usuarios.
 
-Cada objeto funciona directamente como una publicación. Esta decisión simplificó el modelo porque ya no era necesario mantener una entidad `Publication` separada. El objeto contiene su descripción, categoría, condición, ubicación, estado y lo que el propietario desea recibir.
+Cada objeto funciona como una publicación, por lo que no se necesita una entidad `Publication` separada. Contiene descripción, categoría, condición, ubicación, estado y lo que el propietario desea recibir.
 
 El flujo principal funciona de esta forma:
 
@@ -78,42 +78,53 @@ flowchart LR
 
 ## 4. Funcionalidades implementadas
 
-- Autenticación: registro, login, refresh token y cierre de sesión.
-- Objetos: publicación, consulta, eliminación, filtros y paginación.
-- Preferencias: favoritos, categorías de interés y recomendaciones.
-- Propuestas: crear, aceptar, rechazar y cancelar propuestas.
-- Intercambios: confirmar, completar o cancelar un intercambio.
-- Reseñas: calificar al otro participante.
-- Notificaciones: correos para operaciones importantes.
+| Módulo | Funciones principales |
+|---|---|
+| Autenticación | Registro, login, refresh token y cierre de sesión |
+| Objetos | Publicación, consulta, eliminación, filtros y paginación |
+| Preferencias | Objetos favoritos, categorías de interés y recomendaciones |
+| Propuestas | Crear, aceptar, rechazar y cancelar propuestas |
+| Intercambios | Confirmar, completar o cancelar un intercambio |
+| Reseñas | Calificar al otro participante después del intercambio |
+| Notificaciones | Correos por registro, propuesta aceptada e intercambio completado |
 
-El sistema valida que los objetos sigan disponibles antes de aceptar una propuesta. Cuando comienza el intercambio, los dos objetos quedan reservados. Si el intercambio se cancela, vuelven a estar disponibles.
+El sistema valida la disponibilidad de los objetos antes de aceptar una propuesta. Durante el intercambio quedan reservados y, si se cancela, vuelven a estar disponibles.
 
-Las reseñas solo pueden ser creadas por los participantes. Además, el intercambio debe encontrarse completado y cada persona puede escribir solo una reseña.
+Solo los participantes pueden crear una reseña después de completar el intercambio.
 
 ## 5. Tecnologías utilizadas
 
-- Java 21 y Spring Boot 4.
-- Spring Web MVC y Spring Data JPA.
-- Spring Security y JWT.
-- PostgreSQL y H2 para pruebas.
-- JavaMailSender para correos.
-- Maven y Lombok.
-- Docker y GitHub Actions.
-- Postman para documentar y probar la API.
+| Tecnología | Uso en el proyecto |
+|---|---|
+| Java 21 | Lenguaje principal |
+| Spring Boot 4 | Base de la aplicación |
+| Spring Web MVC | Endpoints REST |
+| Spring Data JPA | Acceso a la base de datos |
+| Spring Security | Autenticación y permisos |
+| PostgreSQL | Base de datos principal |
+| H2 | Base de datos para pruebas |
+| JWT | Tokens de acceso y renovación |
+| JavaMailSender | Envío de correos |
+| Maven | Dependencias y compilación |
+| Docker | Empaquetado y ejecución |
+| GitHub Actions | Ejecución automática de pruebas |
+| Postman | Documentación y prueba de endpoints |
 
-No se utilizaron APIs externas para mapas, pagos o inteligencia artificial porque no eran necesarias para completar el MVP.
+No se utilizaron API externas porque no eran necesarias para completar el MVP.
 
 ## 6. Modelo de entidades
 
-El proyecto utiliza siete entidades principales:
+El proyecto utiliza siete entidades principales.
 
-- `User`: usuario registrado, contraseña cifrada y rol.
-- `Category`: clasificación de los objetos.
-- `Item`: objeto publicado para intercambio.
-- `Proposal`: oferta de un objeto por otro.
-- `Exchange`: confirmación y estado del intercambio.
-- `Review`: calificación entre los participantes.
-- `RefreshToken`: renovación y cierre de sesiones.
+| Entidad | Responsabilidad |
+|---|---|
+| `User` | Usuario registrado, contraseña cifrada y rol |
+| `Category` | Clasificación de los objetos |
+| `Item` | Objeto publicado para intercambio |
+| `Proposal` | Oferta de un objeto por otro |
+| `Exchange` | Confirmación y estado del intercambio |
+| `Review` | Calificación entre los participantes |
+| `RefreshToken` | Renovación y cierre de sesiones |
 
 ```mermaid
 erDiagram
@@ -121,7 +132,7 @@ erDiagram
     CATEGORY ||--o{ ITEM : clasifica
     USER }o--o{ ITEM : favoritos
     USER }o--o{ CATEGORY : intereses
-    USER ||--o{ PROPOSAL : envia
+    USER ||--o{ PROPOSAL : envía
     ITEM ||--o{ PROPOSAL : ofrecido
     ITEM ||--o{ PROPOSAL : solicitado
     PROPOSAL ||--o| EXCHANGE : genera
@@ -170,12 +181,14 @@ El proyecto tiene excepciones para recursos inexistentes, conflictos, permisos i
 }
 ```
 
-- `400`: solicitud o validación incorrecta.
-- `401`: usuario sin autenticación válida.
-- `403`: usuario sin permiso para la operación.
-- `404`: recurso no encontrado.
-- `409`: conflicto con el estado de los datos.
-- `500`: error inesperado del servidor.
+| Código | Situación |
+|---:|---|
+| 400 | Solicitud o validación incorrecta |
+| 401 | Usuario sin autenticación válida |
+| 403 | Usuario sin permiso para la operación |
+| 404 | Recurso no encontrado |
+| 409 | Conflicto con el estado de los datos |
+| 500 | Error inesperado del servidor |
 
 ## 9. Seguridad
 
@@ -183,13 +196,15 @@ Las contraseñas se cifran con BCrypt y nunca forman parte de las respuestas. La
 
 Existen los roles `USER` y `ADMIN`. Los administradores pueden gestionar categorías y consultar usuarios. Un usuario común solo puede modificar sus objetos y participar en propuestas o intercambios relacionados con su cuenta.
 
-- BCrypt protege las contraseñas almacenadas.
-- JWT autentica las solicitudes.
-- Los refresh tokens permiten renovar y revocar sesiones.
-- Las variables de entorno protegen claves y credenciales.
-- Spring Data JPA reduce el riesgo de inyección SQL.
-- CORS controla los orígenes permitidos.
-- Las validaciones rechazan datos incorrectos.
+| Medida | Aplicación |
+|---|---|
+| BCrypt | Protege las contraseñas almacenadas |
+| JWT | Autentica las solicitudes sin sesión tradicional |
+| Refresh token | Permite renovar y revocar sesiones |
+| Variables de entorno | Protegen claves y credenciales |
+| Spring Data JPA | Usa parámetros y reduce el riesgo de inyección SQL |
+| CORS | Limita los orígenes que pueden consumir la API |
+| Validación | Rechaza entradas incompletas o incorrectas |
 
 CSRF se encuentra desactivado debido a que la API es stateless y utiliza tokens en el encabezado. La autorización también se valida dentro de los servicios para comprobar la propiedad de objetos y la participación en intercambios.
 
@@ -210,7 +225,7 @@ sequenceDiagram
     S->>E: Publica evento
     E-->>L: Entrega evento
     L-->>M: Ejecuta correo con Async
-    S-->>S: Continua sin esperar el correo
+    S-->>S: Continúa sin esperar el correo
 ```
 
 `NotificationEventListener` procesa estos eventos usando `@Async`. Se configuró un `ThreadPoolTaskExecutor` para que el usuario no tenga que esperar mientras se conecta con el servidor de correo.
@@ -242,7 +257,12 @@ La colección `postman_collection.json` se encuentra en la raíz del repositorio
 
 Se implementaron pruebas de integración para autenticación, permisos, objetos, propuestas, intercambios y reseñas.
 
-Se ejecutaron 39 pruebas. El resultado fue cero fallos, cero errores y ninguna prueba omitida.
+| Resultado actual | Cantidad |
+|---|---:|
+| Pruebas ejecutadas | 39 |
+| Fallos | 0 |
+| Errores | 0 |
+| Omitidas | 0 |
 
 Las pruebas usan H2 y no necesitan una instalación local de PostgreSQL. Se verifican casos correctos y también errores como accesos sin permiso, datos inválidos y operaciones repetidas.
 
@@ -250,7 +270,7 @@ Las pruebas usan H2 y no necesitan una instalación local de PostgreSQL. Se veri
 
 El equipo utilizó ramas para desarrollar funcionalidades y pull requests para integrar los cambios a `main`. Los issues se organizaron en un orden según sus dependencias.
 
-GitHub Actions ejecuta Maven automáticamente en los pushes y pull requests dirigidos a `main`. De esta forma se comprueba que el proyecto compile y que las pruebas continuen funcionando.
+GitHub Actions ejecuta Maven automáticamente en los pushes y pull requests dirigidos a `main`. Así se comprueba que el proyecto compile y que las pruebas continúen funcionando.
 
 ```mermaid
 flowchart LR
@@ -263,18 +283,20 @@ flowchart LR
     F -->|No| C
 ```
 
-## 14. Despliegue
+## 14. Despliegue en AWS
 
-El backend fue preparado para ejecutarse con Docker mediante un `Dockerfile` de varias etapas.
+El backend se empaquetó mediante un `Dockerfile` de varias etapas. La imagen se almacenó en Amazon ECR y se ejecutó en ECS Fargate. La aplicación utilizó Amazon RDS for PostgreSQL y CloudWatch Logs.
 
 ```mermaid
 flowchart LR
-    A[Cliente o Postman] --> B[Backend en Docker]
-    B --> C[(PostgreSQL)]
-    B --> D[Servidor SMTP]
+    ECR(Amazon ECR) -->|Imagen Docker| ECS(ECS Fargate)
+    CLIENTE(Cliente o Postman) --> ECS
+    ECS --> RDS[(Amazon RDS PostgreSQL)]
+    ECS --> LOGS(CloudWatch Logs)
+    ECS --> SMTP(Servidor SMTP)
 ```
 
-Las credenciales de PostgreSQL, el secreto JWT y la configuración del correo se colocan como variables de entorno. Esto evita guardar datos sensibles dentro del repositorio.
+El grupo de seguridad de RDS permite conexiones PostgreSQL desde el grupo utilizado por ECS y no desde toda Internet. Durante la validación, el endpoint público de Fargate respondió correctamente en el puerto configurado. Las credenciales de la base de datos, JWT y correo se proporcionaron como variables de entorno y no se incluyeron en la imagen ni en el repositorio.
 
 ## 15. Ejecución local
 
@@ -282,7 +304,7 @@ Se necesita IntelliJ IDEA, Java 21 y Docker.
 
 1. Clonar o descargar el repositorio.
 2. Abrir el proyecto en IntelliJ y esperar que cargue Maven.
-3. Revisar en Project Structure que el SDK sea Java 21.
+3. Revisar en **Project Structure** que el SDK sea Java 21.
 4. Iniciar Docker Desktop.
 5. Levantar PostgreSQL desde la terminal de IntelliJ:
 
@@ -292,7 +314,7 @@ docker compose up -d
 
 6. Crear `.env` usando `.env.example` como referencia.
 7. Configurar PostgreSQL y una clave JWT de 32 caracteres.
-8. Abrir `ProyectoBackendSwapltApplication` y presionar Run.
+8. Abrir `ProyectoBackendSwapltApplication` y presionar **Run**.
 
 Cuando aparezca el mensaje `Started ProyectoBackendSwapltApplication`, la API estará disponible en:
 
@@ -300,7 +322,7 @@ Cuando aparezca el mensaje `Started ProyectoBackendSwapltApplication`, la API es
 http://localhost:8080/api/v1
 ```
 
-Para las pruebas, se hace clic derecho sobre `src/test/java` y se selecciona Run Tests.
+Para las pruebas, se hace clic derecho sobre `src/test/java` y se selecciona **Run Tests**.
 
 El archivo `.env` contiene datos privados y no se debe subir a GitHub.
 
@@ -310,7 +332,7 @@ SwapIt logró implementar el flujo principal para intercambiar objetos. El backe
 
 Durante el proyecto aprendimos a separar responsabilidades entre controllers, services y repositories. También trabajamos con JWT, validaciones, relaciones JPA, pruebas, Docker y el manejo de errores.
 
-Como trabajo futuro se podría agregar carga de imágenes en S3, recuperación de contraseña, ubicación mediante mapas y un sistema de recomendaciones mas completo.
+Como trabajo futuro se podría agregar carga de imágenes en S3, recuperación de contraseña, mapas y un sistema de recomendaciones más completo.
 
 ## 17. Referencias
 
@@ -320,4 +342,4 @@ Como trabajo futuro se podría agregar carga de imágenes en S3, recuperación d
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [Docker Documentation](https://docs.docker.com/)
 - [Postman Learning Center](https://learning.postman.com/)
-- Material del curso CS 2031 Desarrollo Basado en Plataforma.
+- Material del curso CS2031 Desarrollo Basado en Plataforma.
