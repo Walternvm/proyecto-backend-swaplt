@@ -14,23 +14,25 @@ Ejecuta la aplicación con `sh ./mvnw spring-boot:run`. Para correr las pruebas,
 
 ## Autenticación básica
 
-- `POST /api/auth/register`: crea un usuario con rol `USER`; recibe `name`, `email` y `password` (mínimo 8 caracteres).
-- `POST /api/auth/login`: recibe `email` y `password` y devuelve un token JWT.
+- `POST /api/v1/auth/register`: crea un usuario con rol `USER`; recibe `name`, `email` y `password` (mínimo 8 caracteres).
+- `POST /api/v1/auth/login`: recibe `email` y `password` y devuelve un token JWT y un refresh token.
+- `POST /api/v1/auth/refresh`: renueva la sesión usando el refresh token.
 - En rutas protegidas envía `Authorization: Bearer <token>`.
-- La lectura de objetos, categorías y publicaciones es pública. Solo `ADMIN` puede crear o eliminar categorías y consultar usuarios.
+- La lectura de objetos y categorías es pública. Solo `ADMIN` puede crear o eliminar categorías y consultar usuarios.
 
-## Publicaciones
+## Objetos publicados
 
-Un objeto pertenece a un usuario. Una publicación ofrece ese objeto para intercambio y guarda la fecha, el estado y el tipo de objeto deseado. Para crearla se usa `POST /api/publications` con `itemId` y `wantedItem`. Solo el dueño del objeto puede hacerlo.
+Siguiendo la simplificación indicada en la propuesta, no existe una entidad separada llamada `Publicación`. Cada objeto funciona directamente como la publicación del usuario. Guarda su descripción, categoría, condición, ubicación, estado, fecha y el tipo de objeto que se desea recibir.
+
+Para publicar un objeto se usa `POST /api/v1/items`. El usuario se obtiene del token. Los objetos se pueden buscar con filtros de categoría, estado, condición, ubicación y texto.
 
 ## Datos de la API
 
 Las solicitudes usan IDs para indicar relaciones. Por ejemplo:
 
-- `POST /api/categories`: `{ "name": "Libros" }` (solo ADMIN).
-- `POST /api/items`: `{ "name": "Novela", "description": "Buen estado", "categoryId": 1, "location": "Lima" }`.
-- `POST /api/publications`: `{ "itemId": 1, "wantedItem": "Juego de mesa" }`.
-- `POST /api/proposals`: `{ "offeredItemId": 2, "publicationId": 1, "message": "¿Intercambiamos?" }`.
-- `POST /api/reviews`: `{ "exchangeId": 1, "rating": 5, "comment": "Todo bien" }`.
+- `POST /api/v1/categories`: `{ "name": "Libros" }` (solo ADMIN).
+- `POST /api/v1/items`: `{ "name": "Novela", "description": "Buen estado", "categoryId": 1, "location": "Lima", "wantedItem": "Juego de mesa", "condition": "GOOD" }`.
+- `POST /api/v1/proposals`: `{ "offeredItemId": 2, "requestedItemId": 1, "message": "¿Intercambiamos?" }`.
+- `POST /api/v1/reviews`: `{ "exchangeId": 1, "rating": 5, "comment": "Todo bien" }`.
 
 El servidor obtiene el usuario desde el token y decide los estados y fechas. Las respuestas incluyen IDs y datos simples como `ownerId`, `categoryId` y `status`; no incluyen la contraseña ni entidades anidadas.
