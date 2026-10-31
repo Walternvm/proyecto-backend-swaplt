@@ -206,7 +206,7 @@ Existen los roles `USER` y `ADMIN`. Los administradores pueden gestionar categor
 | CORS | Limita los orígenes que pueden consumir la API |
 | Validación | Rechaza entradas incompletas o incorrectas |
 
-CSRF se encuentra desactivado debido a que la API es stateless y utiliza tokens en el encabezado. La autorización también se valida dentro de los servicios para comprobar la propiedad de objetos y la participación en intercambios.
+CSRF se omite en los endpoints con JWT. La autenticacion web protege el refresh token mediante una cookie `HttpOnly` y exige el encabezado `X-XSRF-TOKEN`.
 
 ## 10. Eventos y asincronía
 
@@ -241,6 +241,11 @@ Todos los endpoints utilizan el prefijo `/api/v1`.
 | POST | `/api/v1/auth/register` | Registrar usuario |
 | POST | `/api/v1/auth/login` | Iniciar sesión |
 | POST | `/api/v1/auth/refresh` | Renovar tokens |
+| GET | `/api/v1/auth/web/csrf` | Obtener CSRF web |
+| POST | `/api/v1/auth/web/register` | Registro web |
+| POST | `/api/v1/auth/web/login` | Login web |
+| POST | `/api/v1/auth/web/refresh` | Renovar sesion web |
+| POST | `/api/v1/auth/web/logout` | Cerrar sesion web |
 | GET | `/api/v1/items` | Buscar objetos |
 | POST | `/api/v1/items` | Publicar objeto |
 | DELETE | `/api/v1/items/{id}` | Eliminar objeto propio |
