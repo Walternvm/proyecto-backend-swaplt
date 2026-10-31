@@ -23,6 +23,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -72,6 +74,8 @@ public class SecurityConfig {
                 List.of(allowedOrigins)
         );
 
+        configuration.setAllowCredentials(true);
+
         configuration.setAllowedMethods(
                 List.of(
                         "GET",
@@ -86,7 +90,8 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(
                 List.of(
                         "Authorization",
-                        "Content-Type"
+                        "Content-Type",
+                        "X-XSRF-TOKEN"
                 )
         );
 
@@ -106,8 +111,19 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
+        PathPatternRequestMatcher webAuthMatcher =
+                PathPatternRequestMatcher.withDefaults()
+                        .matcher(
+                                ApiRoutes.V1 + "/auth/web/**"
+                        );
+
         return http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> {
+                    csrf.spa();
+                    csrf.ignoringRequestMatchers(
+                            new NegatedRequestMatcher(webAuthMatcher)
+                    );
+                })
                 .cors(Customizer.withDefaults())
                 .httpBasic(
                         AbstractHttpConfigurer::disable
