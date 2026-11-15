@@ -69,6 +69,18 @@ public class ItemController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ItemResponseDto> update(
+            @PathVariable Long id,
+            @Valid @RequestBody ItemRequestDto request
+    ) {
+        ItemResponseDto response = itemMapper.toResponseDto(
+                itemService.update(id, request)
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping(
             value = "/{id}/image",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE

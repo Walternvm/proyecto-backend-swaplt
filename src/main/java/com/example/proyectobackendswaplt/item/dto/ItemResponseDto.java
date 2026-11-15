@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Data
 @Builder
@@ -21,6 +22,8 @@ public class ItemResponseDto {
     private String description;
     private ItemState state;
     private String location;
+    private BigDecimal latitude;
+    private BigDecimal longitude;
     private String wantedItem;
     private ItemCondition condition;
     private String imageUrl;

@@ -32,6 +32,8 @@ public class ItemMapper {
         item.setName(request.getName());
         item.setDescription(request.getDescription());
         item.setLocation(request.getLocation());
+        item.setLatitude(request.getLatitude());
+        item.setLongitude(request.getLongitude());
         item.setWantedItem(request.getWantedItem());
         item.setCondition(request.getCondition());
 
@@ -47,6 +49,8 @@ public class ItemMapper {
                 .description(item.getDescription())
                 .state(item.getState())
                 .location(item.getLocation())
+                .latitude(item.getLatitude())
+                .longitude(item.getLongitude())
                 .wantedItem(item.getWantedItem())
                 .condition(item.getCondition())
                 .imageUrl(toImageUrl(item))

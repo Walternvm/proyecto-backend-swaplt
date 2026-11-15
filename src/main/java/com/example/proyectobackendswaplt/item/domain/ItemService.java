@@ -63,6 +63,37 @@ public class ItemService {
         return itemRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Item", id));
     }
 
+    @Transactional
+    public Item update(Long id, ItemRequestDto request) {
+        Item item = findById(id);
+        User currentUser = currentUserService.get();
+
+        if (!item.getUser().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException(
+                    "Solo el propietario puede editar el item"
+            );
+        }
+
+        if (item.getState() != ItemState.AVAILABLE) {
+            throw new ConflictException(
+                    "No se puede editar un item reservado o intercambiado"
+            );
+        }
+
+        item.setName(request.getName());
+        item.setDescription(request.getDescription());
+        item.setCategory(
+                categoryService.findById(request.getCategoryId())
+        );
+        item.setLocation(request.getLocation());
+        item.setLatitude(request.getLatitude());
+        item.setLongitude(request.getLongitude());
+        item.setWantedItem(request.getWantedItem());
+        item.setCondition(request.getCondition());
+
+        return itemRepository.save(item);
+    }
+
     @Transactional(readOnly = true)
     public List<Item> findMine() {
         return itemRepository.findByUserOrderByCreatedAtDesc(
