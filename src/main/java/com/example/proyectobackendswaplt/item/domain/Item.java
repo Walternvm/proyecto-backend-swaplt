@@ -17,6 +17,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Entity
 @NoArgsConstructor
@@ -63,6 +64,12 @@ public class Item {
     @Size(max = 120)
     @Column(nullable = false, length = 120)
     private String location;
+
+    @Column(precision = 9, scale = 6)
+    private BigDecimal latitude;
+
+    @Column(precision = 9, scale = 6)
+    private BigDecimal longitude;
 
     @NotBlank
     @Size(max = 120)

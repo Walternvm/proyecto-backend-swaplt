@@ -81,7 +81,7 @@ flowchart LR
 | Módulo | Funciones principales |
 |---|---|
 | Autenticación | Registro, login, refresh token y cierre de sesión |
-| Objetos | Publicación, consulta, eliminación, filtros y paginación |
+| Objetos | Publicación, actualización, consulta, eliminación, imágenes, ubicación, filtros y paginación |
 | Preferencias | Objetos favoritos, categorías de interés y recomendaciones |
 | Propuestas | Crear, aceptar, rechazar y cancelar propuestas |
 | Intercambios | Confirmar, completar o cancelar un intercambio |
@@ -102,6 +102,8 @@ Solo los participantes pueden crear una reseña después de completar el interca
 | Spring Data JPA | Acceso a la base de datos |
 | Spring Security | Autenticación y permisos |
 | PostgreSQL | Base de datos principal |
+| Amazon S3 | Almacenamiento privado de imágenes |
+| AWS SDK for Java | Integración del backend con Amazon S3 |
 | H2 | Base de datos para pruebas |
 | JWT | Tokens de acceso y renovación |
 | JavaMailSender | Envío de correos |
@@ -110,7 +112,7 @@ Solo los participantes pueden crear una reseña después de completar el interca
 | GitHub Actions | Ejecución automática de pruebas |
 | Postman | Documentación y prueba de endpoints |
 
-No se utilizaron API externas porque no eran necesarias para completar el MVP.
+El backend utiliza Amazon S3 para almacenar imágenes. La geocodificación y visualización de mapas corresponden a los clientes mobile; el backend almacena la ubicación textual y sus coordenadas.
 
 ## 6. Modelo de entidades
 
@@ -248,6 +250,11 @@ Todos los endpoints utilizan el prefijo `/api/v1`.
 | POST | `/api/v1/auth/web/logout` | Cerrar sesion web |
 | GET | `/api/v1/items` | Buscar objetos |
 | POST | `/api/v1/items` | Publicar objeto |
+| GET | `/api/v1/items/{id}` | Consultar un objeto |
+| PUT | `/api/v1/items/{id}` | Actualizar un objeto propio disponible |
+| PUT | `/api/v1/items/{id}/image` | Cargar o reemplazar la imagen |
+| GET | `/api/v1/items/{id}/image` | Obtener acceso temporal a la imagen |
+| GET | `/api/v1/users/me/items` | Consultar los objetos propios |
 | DELETE | `/api/v1/items/{id}` | Eliminar objeto propio |
 | POST | `/api/v1/proposals` | Crear propuesta |
 | PATCH | `/api/v1/proposals/{id}/accept` | Aceptar propuesta |
@@ -255,6 +262,31 @@ Todos los endpoints utilizan el prefijo `/api/v1`.
 | GET | `/api/v1/exchanges` | Consultar intercambios |
 | PATCH | `/api/v1/exchanges/{id}/confirm` | Confirmar intercambio |
 | POST | `/api/v1/reviews` | Crear reseña |
+
+### Ubicación geográfica de los objetos
+
+Los objetos pueden incluir coordenadas geográficas opcionales:
+
+```json
+{
+  "location": "Miraflores, Lima",
+  "latitude": -12.121100,
+  "longitude": -77.029700
+}
+```
+
+Reglas:
+
+- `location` continúa siendo obligatorio.
+- `latitude` y `longitude` son opcionales.
+- Si se proporciona una coordenada, deben proporcionarse ambas.
+- La latitud debe estar entre `-90` y `90`.
+- La longitud debe estar entre `-180` y `180`.
+- Los objetos existentes sin coordenadas continúan siendo válidos.
+- Solo el propietario puede actualizar su objeto.
+- Un objeto reservado o intercambiado no puede editarse.
+
+El backend no realiza geocodificación. La aplicación mobile obtiene la ubicación y convierte las coordenadas a una dirección legible.
 
 La colección `postman_collection.json` se encuentra en la raíz del repositorio. Contiene ejemplos, variables, autorización y solicitudes para probar los recursos principales.
 
@@ -337,7 +369,7 @@ SwapIt logró implementar el flujo principal para intercambiar objetos. El backe
 
 Durante el proyecto aprendimos a separar responsabilidades entre controllers, services y repositories. También trabajamos con JWT, validaciones, relaciones JPA, pruebas, Docker y el manejo de errores.
 
-Como trabajo futuro se podría agregar carga de imágenes en S3, recuperación de contraseña, mapas y un sistema de recomendaciones más completo.
+Como trabajo futuro se podría agregar recuperación de contraseña, búsqueda por distancia y recomendaciones más avanzadas. El backend ya admite imágenes privadas en Amazon S3 y coordenadas geográficas para la integración con mapas.
 
 ## 17. Referencias
 
