@@ -73,6 +73,9 @@ public class Item {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "image_key", length = 512)
+    private String imageKey;
+
     @JsonIgnore
     @OneToMany(mappedBy = "requestedItem")
     private List<Proposal> receivedProposals = new ArrayList<>();

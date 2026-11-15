@@ -13,6 +13,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.net.URI;
 
 @RestController
 @RequestMapping("/items")
@@ -63,6 +67,35 @@ public class ItemController {
         ItemResponseDto response = itemMapper.toResponseDto(itemService.findById(id));
 
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping(
+            value = "/{id}/image",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<ItemResponseDto> updateImage(
+            @PathVariable Long id,
+            @RequestPart("image") MultipartFile image
+    ) {
+        ItemResponseDto response = itemMapper.toResponseDto(
+                itemService.updateImage(id, image)
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/image")
+    public ResponseEntity<Void> getImage(
+            @PathVariable Long id
+    ) {
+        URI location = URI.create(
+                itemService.getImageUrl(id)
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.FOUND)
+                .location(location)
+                .build();
     }
 
     @DeleteMapping("/{id}")
