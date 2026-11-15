@@ -23,5 +23,6 @@ public class ItemResponseDto {
     private String location;
     private String wantedItem;
     private ItemCondition condition;
+    private String imageUrl;
     private LocalDateTime createdAt;
 }

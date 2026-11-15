@@ -12,6 +12,8 @@ import com.example.proyectobackendswaplt.item.dto.ItemRequestDto;
 import com.example.proyectobackendswaplt.item.infrastructure.ItemRepository;
 import com.example.proyectobackendswaplt.item.infrastructure.ItemSpecifications;
 import com.example.proyectobackendswaplt.user.domain.User;
+import com.example.proyectobackendswaplt.item.infrastructure.ItemImageStorageService;
+import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,6 +34,7 @@ public class ItemService {
     private final CategoryService categoryService;
     private final CurrentUserService currentUserService;
     private final ItemMapper itemMapper;
+    private final ItemImageStorageService itemImageStorageService;
 
     @Transactional
     public Item create(ItemRequestDto request) {
@@ -64,6 +67,62 @@ public class ItemService {
     public List<Item> findMine() {
         return itemRepository.findByUserOrderByCreatedAtDesc(
                 currentUserService.get()
+        );
+    }
+
+    @Transactional
+    public Item updateImage(Long id, MultipartFile image) {
+        Item item = findById(id);
+        User currentUser = currentUserService.get();
+
+        if (!item.getUser().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException(
+                    "Solo el propietario puede modificar la imagen"
+            );
+        }
+
+        if (item.getState() != ItemState.AVAILABLE) {
+            throw new ConflictException(
+                    "No se puede modificar la imagen de un item reservado o intercambiado"
+            );
+        }
+
+        String previousImageKey = item.getImageKey();
+        String newImageKey =
+                itemImageStorageService.upload(id, image);
+
+        try {
+            item.setImageKey(newImageKey);
+
+            Item saved = itemRepository.saveAndFlush(item);
+
+            itemImageStorageService.delete(previousImageKey);
+
+            return saved;
+        } catch (RuntimeException exception) {
+            try {
+                itemImageStorageService.delete(newImageKey);
+            } catch (RuntimeException cleanupException) {
+                exception.addSuppressed(cleanupException);
+            }
+
+            throw exception;
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public String getImageUrl(Long id) {
+        Item item = findById(id);
+
+        if (item.getImageKey() == null
+                || item.getImageKey().isBlank()) {
+            throw new ResourceNotFoundException(
+                    "El item no tiene una imagen"
+            );
+        }
+
+        return itemImageStorageService.createReadUrl(
+                item.getImageKey()
         );
     }
 
@@ -104,7 +163,12 @@ public class ItemService {
             throw new ConflictException("No se puede eliminar un item reservado o intercambiado");
         }
 
+        String imageKey = item.getImageKey();
+
         itemRepository.delete(item);
+        itemRepository.flush();
+
+        itemImageStorageService.delete(imageKey);
     }
 
     private Item changeState(Item item, ItemState expectedState, ItemState newState) {
