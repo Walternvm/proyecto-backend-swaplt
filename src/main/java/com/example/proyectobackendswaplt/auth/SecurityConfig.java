@@ -23,6 +23,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
@@ -109,7 +110,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, @Value("${app.auth.refresh-cookie.secure}") boolean secureCookies) throws Exception {
 
         PathPatternRequestMatcher webAuthMatcher =
                 PathPatternRequestMatcher.withDefaults()
@@ -117,9 +118,17 @@ public class SecurityConfig {
                                 ApiRoutes.V1 + "/auth/web/**"
                         );
 
+        CookieCsrfTokenRepository csrfRepository =
+                CookieCsrfTokenRepository.withHttpOnlyFalse();
+
+        csrfRepository.setCookieCustomizer(cookie ->
+                cookie.secure(secureCookies)
+        );
+
         return http
                 .csrf(csrf -> {
                     csrf.spa();
+                    csrf.csrfTokenRepository(csrfRepository);
                     csrf.ignoringRequestMatchers(
                             new NegatedRequestMatcher(webAuthMatcher)
                     );
