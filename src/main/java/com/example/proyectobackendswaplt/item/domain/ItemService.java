@@ -61,6 +61,13 @@ public class ItemService {
     }
 
     @Transactional(readOnly = true)
+    public List<Item> findMine() {
+        return itemRepository.findByUserOrderByCreatedAtDesc(
+                currentUserService.get()
+        );
+    }
+
+    @Transactional(readOnly = true)
     public List<Item> findAvailableByCategoriesExcludingUser(Collection<Category> categories, User user) {
         if (categories.isEmpty()) {
             return List.of();

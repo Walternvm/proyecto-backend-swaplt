@@ -8,6 +8,7 @@ import com.example.proyectobackendswaplt.item.dto.ItemResponseDto;
 import com.example.proyectobackendswaplt.user.domain.UserPreferenceService;
 import com.example.proyectobackendswaplt.user.dto.UserMapper;
 import com.example.proyectobackendswaplt.user.dto.UserResponseDto;
+import com.example.proyectobackendswaplt.item.domain.ItemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +24,22 @@ public class MeController {
     private final UserMapper userMapper;
     private final ItemMapper itemMapper;
     private final CategoryMapper categoryMapper;
+    private final ItemService itemService;
 
     @GetMapping
     public ResponseEntity<UserResponseDto> me() {
         UserResponseDto response = userMapper.toResponseDto(currentUserService.get());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/items")
+    public ResponseEntity<List<ItemResponseDto>> getItems() {
+        List<ItemResponseDto> response = itemService
+                .findMine()
+                .stream()
+                .map(itemMapper::toResponseDto)
+                .toList();
+
         return ResponseEntity.ok(response);
     }
 

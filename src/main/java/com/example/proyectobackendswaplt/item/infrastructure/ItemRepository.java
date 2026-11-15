@@ -12,4 +12,5 @@ import java.util.List;
 
 public interface ItemRepository extends JpaRepository<Item, Long>, JpaSpecificationExecutor<Item> {
     List<Item> findByStateAndCategoryInAndUserNotOrderByCreatedAtDesc(ItemState state, Collection<Category> categories, User user);
+    List<Item> findByUserOrderByCreatedAtDesc(User user);
 }
