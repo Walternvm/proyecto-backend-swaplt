@@ -56,6 +56,18 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    @Transactional
+    public User updateName(Long id, String name) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Usuario", id)
+                );
+
+        user.setName(name.trim());
+
+        return userRepository.save(user);
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void delete(Long id) {
