@@ -12,6 +12,10 @@ import com.example.proyectobackendswaplt.item.domain.ItemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.example.proyectobackendswaplt.user.domain.User;
+import com.example.proyectobackendswaplt.user.domain.UserService;
+import com.example.proyectobackendswaplt.user.dto.UserUpdateRequestDto;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -25,11 +29,28 @@ public class MeController {
     private final ItemMapper itemMapper;
     private final CategoryMapper categoryMapper;
     private final ItemService itemService;
+    private final UserService userService;
 
     @GetMapping
     public ResponseEntity<UserResponseDto> me() {
         UserResponseDto response = userMapper.toResponseDto(currentUserService.get());
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping
+    public ResponseEntity<UserResponseDto> updateMe(
+            @Valid @RequestBody UserUpdateRequestDto request
+    ) {
+        User currentUser = currentUserService.get();
+
+        User updatedUser = userService.updateName(
+                currentUser.getId(),
+                request.name()
+        );
+
+        return ResponseEntity.ok(
+                userMapper.toResponseDto(updatedUser)
+        );
     }
 
     @GetMapping("/items")
