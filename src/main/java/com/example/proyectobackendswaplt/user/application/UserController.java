@@ -5,6 +5,8 @@ import com.example.proyectobackendswaplt.user.dto.UserMapper;
 import com.example.proyectobackendswaplt.user.dto.UserResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import com.example.proyectobackendswaplt.user.domain.User;
+import com.example.proyectobackendswaplt.user.dto.PublicUserProfileDto;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,6 +28,20 @@ public class UserController {
     public ResponseEntity<UserResponseDto> findById(@PathVariable Long id) {
         UserResponseDto response = userMapper.toResponseDto(userService.findById(id));
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/profile")
+    public ResponseEntity<PublicUserProfileDto> findPublicProfile(
+            @PathVariable Long id
+    ) {
+        User user = userService.findById(id);
+
+        return ResponseEntity.ok(
+                new PublicUserProfileDto(
+                        user.getId(),
+                        user.getName()
+                )
+        );
     }
 
     @DeleteMapping("/{id}")

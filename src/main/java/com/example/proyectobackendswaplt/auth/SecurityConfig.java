@@ -195,6 +195,12 @@ public class SecurityConfig {
                         .authenticated()
 
                         .requestMatchers(
+                                HttpMethod.GET,
+                                ApiRoutes.V1 + "/users/*/profile"
+                        )
+                        .authenticated()
+
+                        .requestMatchers(
                                 ApiRoutes.V1 + "/users/**"
                         )
                         .hasRole("ADMIN")
